@@ -35,6 +35,8 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 
 Apple's Vision and Core ML aren't available in browsers, so the web version uses [TensorFlow.js](https://www.tensorflow.org/js) with the [COCO-SSD](https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd) model (`lite_mobilenet_v2`). The scripts load from jsDelivr and the weights from Google Storage the first time the wand is tapped. After that, inference runs entirely in the browser, and the drawing is never uploaded.
 
+To serve the weights yourself (for example on a host that can't reach Google Storage), download the `ssdlite_mobilenet_v2` model files and set `window.DRAWINGKID_MODEL_URL` to their `model.json` before `js/app.js` loads.
+
 **Limitation:** COCO-SSD was trained on photos of 80 everyday object classes. It reliably finds dogs, cats, people and cars in uploaded photos. It usually does **not** recognize children's line drawings, and in that case the app says "I'm not sure what that is". Doodle recognition would need a sketch-trained model, e.g. one trained on Google's Quick, Draw! dataset. It would plug into `detectObjects()` in `js/ai.js`.
 
 ## Code layout

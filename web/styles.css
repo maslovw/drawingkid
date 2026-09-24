@@ -23,20 +23,24 @@
 html,
 body {
   margin: 0;
+  background: var(--bg);
   height: 100%;
   overscroll-behavior: none;
+}
+
+html {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
 }
 
 body {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  height: 100dvh;
   background: var(--bg);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 button {
@@ -461,4 +465,32 @@ dialog::backdrop {
   .action {
     min-width: 50px;
   }
+}
+
+/* ---- Save preview ---- */
+
+.save-preview {
+  width: min(720px, 94vw);
+}
+
+.save-preview form {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.save-preview img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  -webkit-touch-callout: default;
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+.save-preview .confirm-actions {
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 0;
 }

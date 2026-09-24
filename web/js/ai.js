@@ -25,7 +25,8 @@ function loadScript(src) {
 function loadModel() {
   modelPromise ??= (async () => {
     for (const src of SCRIPTS) await loadScript(src);
-    return window.cocoSsd.load({ base: 'lite_mobilenet_v2' });
+    // Hosts that can't reach Google Storage can serve the weights themselves.
+    return window.cocoSsd.load({ base: 'lite_mobilenet_v2', modelUrl: window.DRAWINGKID_MODEL_URL });
   })().catch((error) => {
     modelPromise = null; // allow retry, e.g. after coming back online
     throw error;

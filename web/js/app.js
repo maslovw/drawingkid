@@ -91,11 +91,19 @@ $('export').addEventListener('click', async () => {
       if (error.name === 'AbortError') return;
     }
   }
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(file);
-  link.download = file.name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  // No share sheet (desktop, or a host that blocks it): show the picture so it can be
+  // saved with a long-press / right-click, plus a download button where downloads work.
+  const url = URL.createObjectURL(file);
+  const dialog = $('save-dialog');
+  $('save-image').src = url;
+  $('save-download').onclick = () => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.name;
+    link.click();
+  };
+  dialog.addEventListener('close', () => URL.revokeObjectURL(url), { once: true });
+  dialog.showModal();
 });
 
 let analyzing = false;

@@ -90,6 +90,18 @@
       </form>
     </dialog>
 
+    <dialog id="save-dialog" class="confirm save-preview">
+      <form method="dialog">
+        <p class="confirm-title">Your drawing</p>
+        <img id="save-image" alt="Your drawing" />
+        <p class="hint">Press and hold the picture to save it to Photos, or right-click and choose Save Image.</p>
+        <div class="confirm-actions">
+          <button id="save-download" type="button" class="primary">Download</button>
+          <button value="close">Close</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <script type="module" src="js/app.js"></script>

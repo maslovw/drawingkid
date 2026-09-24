@@ -26,9 +26,8 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Palette | 10 colors, 3 brush sizes. Picking a color while erasing switches back to the last drawing tool. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
-| Settings | Choose which tools and colors appear, the starting brush size, and whether the magic wand is shown. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
+| Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
-| Magic wand | Detects objects and shows tappable boxes. Tapping one says what it is aloud and plays an emoji burst. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
@@ -48,7 +47,7 @@ To set things up once for every device, copy `config.local.example.json` to `con
 Every device that opens the app from this server loads the file at startup:
 
 - **API keys** in the file are used on every device and can't be viewed or changed in Settings.
-- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `enableAI`, `leftHanded`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
+- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `leftHanded`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
 - Changes take effect the next time the app is opened or reloaded.
 
 `config.local.json` is in `.gitignore`, so keys don't end up in the repository. The server hands the file to anyone who can reach it, so anyone on your home network could read the keys. Serve the app only on your home network, and use keys with a spending limit.
@@ -61,14 +60,6 @@ The iPad mini's screen is 1133×744 points, and Safari's bars take more of the h
 - **Portrait:** undo and the actions are in a slim bar on top, and tools, sizes and colors are along the bottom.
 - **Touch targets:** every button is at least 44pt, Apple's minimum; color swatches are 44pt and tool buttons 56–60pt.
 - **Page shape:** a new page takes the shape of the space between the controls, so it fills the screen. If the iPad is rotated after drawing has started, the page keeps its shape and is fitted in; a blank page reshapes itself. **Clear → New blank page** starts a page sized for the current orientation. Generated coloring pages are requested in the closest matching shape.
-
-## AI detection
-
-Apple's Vision and Core ML aren't available in browsers, so the web version uses [TensorFlow.js](https://www.tensorflow.org/js) with the [COCO-SSD](https://github.com/tensorflow/tfjs-models/tree/master/coco-ssd) model (`lite_mobilenet_v2`). The scripts load from jsDelivr and the weights from Google Storage the first time the wand is tapped. After that, inference runs entirely in the browser, and the drawing is never uploaded.
-
-To serve the weights yourself (for example on a host that can't reach Google Storage), download the `ssdlite_mobilenet_v2` model files and set `window.DRAWINGKID_MODEL_URL` to their `model.json` before `js/app.js` loads.
-
-**Limitation:** COCO-SSD was trained on photos of 80 everyday object classes. It reliably finds dogs, cats, people and cars in uploaded photos. It usually does **not** recognize children's line drawings, and in that case the app says "I'm not sure what that is". Doodle recognition would need a sketch-trained model, e.g. one trained on Google's Quick, Draw! dataset. It would plug into `detectObjects()` in `js/ai.js`.
 
 ## Coloring page generator
 
@@ -93,20 +84,18 @@ web/
 ├── config.local.example.json  template for shared settings and API keys
 ├── styles.css
 └── js/
-    ├── app.js            wiring: buttons, autosave, magic wand, shortcuts
+    ├── app.js            wiring: buttons, autosave, page shape, shortcuts
     ├── config.js         tools/colors/sizes + AppConfig (localStorage)
     ├── viewmodel.js      selected tool/color/size, config updates
     ├── document.js       op log, undo/redo, layer rendering, (de)serialization
     ├── render.js         stroke drawing + flood fill
     ├── input.js          pointer events → strokes/fills, live preview
     ├── storage.js        IndexedDB autosave
-    ├── ai.js             TensorFlow.js COCO-SSD loader + labels
     ├── imagegen.js       coloring pages via OpenAI / Gemini
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog
-        ├── parentgate.js grown-ups-only math check
-        └── detections.js tappable detection overlay
+        └── parentgate.js grown-ups-only math check
 ```
 
 The drawing is stored as a log of small operations (strokes, fills, clears, background changes) rather than bitmaps. That makes undo exact and the saved data small. Once there are more than 50 operations, the oldest are merged ("baked") into a base image.

@@ -207,11 +207,6 @@ button:focus-visible {
   background: linear-gradient(135deg, #fff1b8, #ffd6f0);
 }
 
-.action[aria-busy='true'] .icon {
-  display: inline-block;
-  animation: wiggle 0.6s ease-in-out infinite;
-}
-
 .tool {
   display: flex;
   flex-direction: column;
@@ -299,90 +294,6 @@ button:focus-visible {
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-/* ---- AI detections ---- */
-
-.detections {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.detection {
-  position: absolute;
-  pointer-events: auto;
-  border: 4px dashed #22c55e;
-  border-radius: 16px;
-  background: rgb(34 197 94 / 0.12);
-  padding: 0;
-}
-
-.detection-label {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: #22c55e;
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.05rem;
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-
-.detection.bounce {
-  animation: bounce 0.5s ease;
-}
-
-.detections-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  pointer-events: auto;
-  width: 44px;
-  height: 44px;
-  border: none;
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.55);
-  color: #fff;
-  font-size: 1.3rem;
-}
-
-.particle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  font-size: 2rem;
-  pointer-events: none;
-  animation: burst 0.9s ease-out forwards;
-}
-
-@keyframes burst {
-  from {
-    transform: translate(-50%, -50%) scale(0.4);
-    opacity: 1;
-  }
-  to {
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2);
-    opacity: 0;
-  }
-}
-
-@keyframes bounce {
-  30% {
-    transform: scale(1.08);
-  }
-  60% {
-    transform: scale(0.96);
-  }
-}
-
-@keyframes wiggle {
-  50% {
-    transform: rotate(-15deg);
-  }
 }
 
 /* ---- Dialogs ---- */
@@ -699,9 +610,7 @@ dialog::backdrop {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gate.shake,
-  .detection.bounce,
-  .particle {
+  .gate.shake {
     animation: none;
   }
 }

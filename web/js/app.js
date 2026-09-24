@@ -6,12 +6,10 @@ import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
 import { loadDrawing, saveDrawing } from './storage.js';
-import { detectObjects, emojiFor } from './ai.js';
 import { PROVIDERS, generateColoringPage, loadApiKeys, setManagedApiKeys } from './imagegen.js';
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { ParentGate } from './views/parentgate.js';
-import { DetectionOverlay, speak } from './views/detections.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -23,7 +21,6 @@ new CanvasInput($('paper'), $('live'), doc, () => vm.brush);
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
-const detections = new DetectionOverlay($('detections'));
 
 // --- Page shape ----------------------------------------------------------
 // The paper fills the space between the toolbars. A new page takes the shape of that
@@ -86,13 +83,11 @@ function toast(message, ms = 2500) {
 function syncActions() {
   $('undo').disabled = !doc.canUndo;
   $('redo').disabled = !doc.canRedo;
-  $('analyze').hidden = !vm.config.enableAI;
   $('create').hidden = !vm.config.enableImageGen;
 }
 
 doc.addEventListener('change', () => {
   syncActions();
-  detections.hide(); // detections are stale once the drawing changes
   scheduleSave();
 });
 vm.addEventListener('change', syncActions);
@@ -227,42 +222,6 @@ $('export').addEventListener('click', async () => {
   dialog.addEventListener('close', () => URL.revokeObjectURL(url), { once: true });
   dialog.showModal();
 });
-
-let analyzing = false;
-$('analyze').addEventListener('click', async () => {
-  if (analyzing) return;
-  analyzing = true;
-  const button = $('analyze');
-  button.setAttribute('aria-busy', 'true');
-  const version = doc.version;
-  toast('Looking at your drawing…', 10000);
-  try {
-    const found = await detectObjects(doc.composite(640, 480));
-    if (doc.version !== version) return; // drawing changed meanwhile; results are stale
-    if (!found.length) {
-      toast("Hmm, I'm not sure what that is. Try drawing it bigger!");
-      speak("Hmm, I'm not sure what that is.");
-      return;
-    }
-    detections.show(found);
-    const names = [...new Set(found.map((d) => d.label))];
-    toast(`I see: ${names.map((n) => `${emojiFor(n)} ${n}`).join(', ')}`);
-    speak(`I see ${listPhrase(names)}!`);
-  } catch (error) {
-    console.error(error);
-    toast('The magic wand needs an internet connection the first time.');
-  } finally {
-    analyzing = false;
-    button.removeAttribute('aria-busy');
-  }
-});
-
-function listPhrase(names) {
-  const withArticle = names.map((n) => `${/^[aeiou]/.test(n) ? 'an' : 'a'} ${n}`);
-  return withArticle.length > 1
-    ? `${withArticle.slice(0, -1).join(', ')} and ${withArticle.at(-1)}`
-    : withArticle[0];
-}
 
 // --- Keyboard shortcuts --------------------------------------------------
 

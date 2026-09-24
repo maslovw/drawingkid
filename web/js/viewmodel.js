@@ -61,10 +61,6 @@ export class AppViewModel extends EventTarget {
     this.#updateConfig({ defaultSize: id });
   }
 
-  setAIEnabled(enabled) {
-    this.#updateConfig({ enableAI: enabled });
-  }
-
   setLeftHanded(leftHanded) {
     this.#updateConfig({ leftHanded });
   }

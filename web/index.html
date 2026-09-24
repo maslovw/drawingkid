@@ -22,7 +22,6 @@
 
       <nav class="group actions" aria-label="Actions">
         <button id="create" class="action magic" type="button" title="Make a coloring page"><span class="icon" aria-hidden="true">🖍️</span><span class="caption">Create</span></button>
-        <button id="analyze" class="action magic" type="button" title="What did I draw?"><span class="icon" aria-hidden="true">🪄</span><span class="caption">Magic</span></button>
         <button id="import" class="action" type="button" title="Add a picture"><span class="icon" aria-hidden="true">🖼️</span><span class="caption">Picture</span></button>
         <button id="export" class="action" type="button" title="Save or share"><span class="icon" aria-hidden="true">💾</span><span class="caption">Save</span></button>
         <span class="spacer"></span>
@@ -36,7 +35,6 @@
           <canvas id="bg"></canvas>
           <canvas id="draw"></canvas>
           <canvas id="live"></canvas>
-          <div id="detections" class="detections" hidden></div>
         </div>
       </main>
 
@@ -77,17 +75,6 @@
             <input id="settings-lefty" type="checkbox" />
             <span class="choice-body">Left-handed: put tools and colors on the right</span>
           </label>
-        </section>
-        <section>
-          <h3>Magic wand</h3>
-          <label class="choice wide">
-            <input id="settings-ai" type="checkbox" />
-            <span class="choice-body">Show the “What did I draw?” button</span>
-          </label>
-          <p class="hint">
-            Recognizes objects with a small TensorFlow.js model that runs in the browser.
-            It's downloaded (a few MB) the first time the button is used; the drawing never leaves the device.
-          </p>
         </section>
         <section>
           <h3>Coloring page generator</h3>

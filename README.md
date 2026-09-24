@@ -27,7 +27,7 @@ A browser version lives in [`web/`](web/). It works in Safari on iPad and in des
 cd web && python3 -m http.server 8000   # open http://localhost:8000
 ```
 
-It has the same features (tools, palette, undo/redo, picture upload, settings, AI object detection), plus a fill bucket for coloring pages and autosave. See [web/README.md](web/README.md).
+It has the drawing features (tools, palette, undo/redo, picture upload, settings), plus a fill bucket, a coloring page generator (OpenAI or Gemini) and autosave. It has no object detection. See [web/README.md](web/README.md).
 
 ## 🏗️ Architecture
 

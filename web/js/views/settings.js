@@ -82,7 +82,6 @@ export class SettingsView {
     q('#settings-size').replaceChildren(
       ...SIZES.map((s) => choice('radio', 'size', s.id, s.label, () => vm.setDefaultSize(s.id))),
     );
-    q('#settings-ai').addEventListener('change', (e) => vm.setAIEnabled(e.target.checked));
     q('#settings-lefty').addEventListener('change', (e) => vm.setLeftHanded(e.target.checked));
 
     q('#settings-imagegen').addEventListener('change', (e) => vm.setImageGenEnabled(e.target.checked));
@@ -110,10 +109,9 @@ export class SettingsView {
       }
     }
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
-    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-ai, #settings-lefty, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
+    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-lefty, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
       el.disabled = false;
     }
-    this.dialog.querySelector('#settings-ai').checked = config.enableAI;
     this.dialog.querySelector('#settings-lefty').checked = config.leftHanded;
 
     const q = (sel) => this.dialog.querySelector(sel);
@@ -142,7 +140,6 @@ export class SettingsView {
     lock(inputs('tools'), vm.isManaged('visibleTools'));
     lock(inputs('colors'), vm.isManaged('visibleColors'));
     lock(inputs('size'), vm.isManaged('defaultSize'));
-    lock([q('#settings-ai')], vm.isManaged('enableAI'));
     lock([q('#settings-lefty')], vm.isManaged('leftHanded'));
     lock([q('#settings-imagegen')], vm.isManaged('enableImageGen'));
     lock(inputs('provider'), vm.isManaged('imageProvider'));

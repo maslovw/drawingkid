@@ -11,6 +11,13 @@ import { DEFAULT_SIZE, createCanvas, canvasToBlob, drawStroke, floodFill, toLine
 
 const MAX_UNDO = 50;
 
+// crypto.randomUUID only exists on HTTPS/localhost pages; getRandomValues works everywhere,
+// including the app opened over plain http:// on the home network.
+function newId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export class DrawingDocument extends EventTarget {
   // `canvases` are the on-screen layers ({ bg, draw, live }); they're sized to the page.
   constructor(canvases) {
@@ -86,7 +93,7 @@ export class DrawingDocument extends EventTarget {
       ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
       if (lineArt) toLineArt(ctx);
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
-      const imageId = crypto.randomUUID();
+      const imageId = newId();
       this.images.set(imageId, { blob, bitmap: canvas });
       this.commit({ type: 'background', imageId });
     } finally {

@@ -1,0 +1,70 @@
+// Tools, colors, sizes and the persisted AppConfig (which of them are visible).
+
+export const TOOLS = [
+  { id: 'pen', label: 'Pen', icon: '🖊️' },
+  { id: 'pencil', label: 'Pencil', icon: '✏️' },
+  { id: 'marker', label: 'Marker', icon: '🖍️' },
+  { id: 'fill', label: 'Fill', icon: '🪣' },
+  { id: 'eraser', label: 'Eraser', icon: '🧽' },
+];
+
+export const COLORS = [
+  { id: 'black', label: 'Black', value: '#1f1f1f' },
+  { id: 'red', label: 'Red', value: '#e53935' },
+  { id: 'orange', label: 'Orange', value: '#fb8c00' },
+  { id: 'yellow', label: 'Yellow', value: '#fdd835' },
+  { id: 'green', label: 'Green', value: '#43a047' },
+  { id: 'blue', label: 'Blue', value: '#1e88e5' },
+  { id: 'purple', label: 'Purple', value: '#8e24aa' },
+  { id: 'pink', label: 'Pink', value: '#f06292' },
+  { id: 'brown', label: 'Brown', value: '#6d4c41' },
+  { id: 'white', label: 'White', value: '#ffffff' },
+];
+
+// Brush sizes in canvas pixels (the canvas is 2048×1536).
+export const SIZES = [
+  { id: 'small', label: 'Small', px: 8 },
+  { id: 'medium', label: 'Medium', px: 18 },
+  { id: 'large', label: 'Large', px: 40 },
+];
+
+export const DEFAULT_CONFIG = Object.freeze({
+  visibleTools: TOOLS.map((t) => t.id),
+  visibleColors: COLORS.map((c) => c.id),
+  defaultSize: 'medium',
+  enableAI: true,
+});
+
+const STORAGE_KEY = 'drawingkid.config';
+
+export function loadConfig() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
+  } catch {
+    // Corrupt or unavailable storage: fall back to defaults.
+  }
+  return normalizeConfig({ ...DEFAULT_CONFIG, ...saved });
+}
+
+export function saveConfig(config) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    // Private mode / quota: settings just won't persist.
+  }
+}
+
+// Drop unknown ids, keep canonical order, and never leave a list empty.
+export function normalizeConfig(config) {
+  const pick = (all, ids, fallback) => {
+    const list = all.map((x) => x.id).filter((id) => ids?.includes(id));
+    return list.length ? list : fallback;
+  };
+  return {
+    visibleTools: pick(TOOLS, config.visibleTools, DEFAULT_CONFIG.visibleTools),
+    visibleColors: pick(COLORS, config.visibleColors, DEFAULT_CONFIG.visibleColors),
+    defaultSize: SIZES.some((s) => s.id === config.defaultSize) ? config.defaultSize : DEFAULT_CONFIG.defaultSize,
+    enableAI: config.enableAI !== false,
+  };
+}

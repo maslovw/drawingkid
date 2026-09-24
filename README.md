@@ -19,6 +19,16 @@ A delightful iPad drawing app designed for kids, featuring Apple Pencil support,
 - ⚙️ **Customizable**: Configure which tools and colors are visible
 - 👶 **Kid-Friendly**: Simple, intuitive interface designed for children
 
+## 🌐 Web version
+
+A browser version lives in [`web/`](web/). It works in Safari on iPad and in desktop browsers, and has no build step:
+
+```bash
+cd web && python3 -m http.server 8000   # open http://localhost:8000
+```
+
+It has the same features (tools, palette, undo/redo, picture upload, settings, AI object detection), plus a fill bucket for coloring pages and autosave. See [web/README.md](web/README.md).
+
 ## 🏗️ Architecture
 
 The app follows **MVVM (Model-View-ViewModel)** architecture with clear separation of concerns:

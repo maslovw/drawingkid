@@ -137,12 +137,11 @@
     <dialog id="gate-dialog" class="confirm gate">
       <form id="gate-form">
         <p class="confirm-title">Grown-ups only</p>
-        <p class="hint">Solve this to open Settings.</p>
+        <p class="hint">Tap the right answer to open Settings.</p>
         <p id="gate-question" class="gate-question"></p>
-        <input id="gate-answer" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" aria-labelledby="gate-question" />
+        <div id="gate-choices" class="gate-choices" role="group" aria-labelledby="gate-question"></div>
         <p id="gate-hint" class="hint" role="status"></p>
         <div class="confirm-actions">
-          <button type="submit" class="primary">Open Settings</button>
           <button id="gate-cancel" type="button">Cancel</button>
         </div>
       </form>

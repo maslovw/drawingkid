@@ -525,8 +525,7 @@ dialog::backdrop {
 
 .field-grid input,
 .field-grid select,
-.create input[type='text'],
-.gate input {
+.create input[type='text'] {
   width: 100%;
   padding: 10px 12px;
   border: 2px solid #e8e2d8;
@@ -538,8 +537,7 @@ dialog::backdrop {
 
 .field-grid input:focus,
 .field-grid select:focus,
-.create input[type='text']:focus,
-.gate input:focus {
+.create input[type='text']:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -616,10 +614,26 @@ dialog::backdrop {
   font-variant-numeric: tabular-nums;
 }
 
-.gate input {
-  width: 8ch;
-  text-align: center;
+.gate-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.gate-choices button {
+  padding: 14px 0;
+  border: 2px solid #e8e2d8;
+  border-radius: 14px;
+  background: #fff;
   font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gate-choices button:focus-visible {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .gate.shake {

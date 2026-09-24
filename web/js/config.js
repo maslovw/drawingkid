@@ -35,6 +35,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   visibleColors: COLORS.map((c) => c.id),
   defaultSize: 'medium',
   enableAI: true,
+  leftHanded: false,
   enableImageGen: true,
   imageProvider: 'openai',
   imageModels: { openai: PROVIDERS.openai.defaultModel, gemini: PROVIDERS.gemini.defaultModel },
@@ -71,6 +72,7 @@ export function normalizeConfig(config) {
     visibleColors: pick(COLORS, config.visibleColors, DEFAULT_CONFIG.visibleColors),
     defaultSize: SIZES.some((s) => s.id === config.defaultSize) ? config.defaultSize : DEFAULT_CONFIG.defaultSize,
     enableAI: config.enableAI !== false,
+    leftHanded: config.leftHanded === true,
     enableImageGen: config.enableImageGen !== false,
     imageProvider: config.imageProvider in PROVIDERS ? config.imageProvider : DEFAULT_CONFIG.imageProvider,
     imageModels: Object.fromEntries(

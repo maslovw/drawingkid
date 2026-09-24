@@ -30,7 +30,17 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
 | Magic wand | Detects objects and shows tappable boxes. Tapping one says what it is aloud and plays an emoji burst. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
+| Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
+
+## Layout (tuned for iPad mini)
+
+The iPad mini's screen is 1133×744 points, and Safari's bars take more of the height. The paper takes about 77% of the screen in either orientation.
+
+- **Landscape:** controls sit in side rails, because height is the scarce dimension. Tools, brush sizes and colors are on the left, within reach of a right-handed child's free hand (the same idea as Procreate's sidebar). Undo, redo and the actions are on the right, with Clear and Settings last. Settings has a **Left-handed** option that swaps the sides.
+- **Portrait:** undo and the actions are in a slim bar on top, and tools, sizes and colors are along the bottom.
+- **Touch targets:** every button is at least 44pt, Apple's minimum; color swatches are 44pt and tool buttons 56–60pt.
+- **Page shape:** a new page takes the shape of the space between the controls, so it fills the screen. If the iPad is rotated after drawing has started, the page keeps its shape and is fitted in; a blank page reshapes itself. **Clear → New blank page** starts a page sized for the current orientation. Generated coloring pages are requested in the closest matching shape.
 
 ## AI detection
 

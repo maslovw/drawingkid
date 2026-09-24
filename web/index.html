@@ -13,34 +13,39 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <h1 class="brand">🎨 Drawing Kid</h1>
-      <nav class="actions" aria-label="Actions">
-        <button id="undo" class="action" type="button" title="Undo"><span aria-hidden="true">↩️</span><span class="caption">Undo</span></button>
-        <button id="redo" class="action" type="button" title="Redo"><span aria-hidden="true">↪️</span><span class="caption">Redo</span></button>
-        <button id="create" class="action magic" type="button" title="Make a coloring page"><span aria-hidden="true">🖍️</span><span class="caption">Create</span></button>
-        <button id="import" class="action" type="button" title="Add a picture"><span aria-hidden="true">🖼️</span><span class="caption">Picture</span></button>
-        <button id="analyze" class="action magic" type="button" title="What did I draw?"><span aria-hidden="true">🪄</span><span class="caption">Magic</span></button>
-        <button id="export" class="action" type="button" title="Save or share"><span aria-hidden="true">💾</span><span class="caption">Save</span></button>
-        <button id="clear" class="action" type="button" title="Start over"><span aria-hidden="true">🗑️</span><span class="caption">Clear</span></button>
-        <button id="settings" class="action" type="button" title="Settings"><span aria-hidden="true">⚙️</span><span class="caption">Settings</span></button>
+    <div class="app">
+      <div class="rail rail-end">
+        <nav class="group history" aria-label="Undo and redo">
+        <button id="undo" class="action" type="button" title="Undo"><span class="icon" aria-hidden="true">↩️</span><span class="caption">Undo</span></button>
+        <button id="redo" class="action" type="button" title="Redo"><span class="icon" aria-hidden="true">↪️</span><span class="caption">Redo</span></button>
       </nav>
-    </header>
 
-    <main class="stage">
-      <div id="paper" class="paper">
-        <canvas id="bg"></canvas>
-        <canvas id="draw"></canvas>
-        <canvas id="live"></canvas>
-        <div id="detections" class="detections" hidden></div>
+      <nav class="group actions" aria-label="Actions">
+        <button id="create" class="action magic" type="button" title="Make a coloring page"><span class="icon" aria-hidden="true">🖍️</span><span class="caption">Create</span></button>
+        <button id="analyze" class="action magic" type="button" title="What did I draw?"><span class="icon" aria-hidden="true">🪄</span><span class="caption">Magic</span></button>
+        <button id="import" class="action" type="button" title="Add a picture"><span class="icon" aria-hidden="true">🖼️</span><span class="caption">Picture</span></button>
+        <button id="export" class="action" type="button" title="Save or share"><span class="icon" aria-hidden="true">💾</span><span class="caption">Save</span></button>
+        <span class="spacer"></span>
+        <button id="clear" class="action" type="button" title="Start over"><span class="icon" aria-hidden="true">🗑️</span><span class="caption">Clear</span></button>
+        <button id="settings" class="action" type="button" title="Settings (grown-ups)"><span class="icon" aria-hidden="true">⚙️</span><span class="caption">Settings</span></button>
+      </nav>
       </div>
-    </main>
 
-    <footer class="toolbar">
-      <div id="tools" class="group" role="toolbar" aria-label="Tools"></div>
-      <div id="sizes" class="group" role="toolbar" aria-label="Brush size"></div>
+      <main id="stage" class="stage">
+        <div id="paper" class="paper">
+          <canvas id="bg"></canvas>
+          <canvas id="draw"></canvas>
+          <canvas id="live"></canvas>
+          <div id="detections" class="detections" hidden></div>
+        </div>
+      </main>
+
+      <div class="rail rail-start">
+        <div id="tools" class="group tools" role="toolbar" aria-label="Tools"></div>
+        <div id="sizes" class="group sizes" role="toolbar" aria-label="Brush size"></div>
+      </div>
       <div id="colors" class="group colors" role="toolbar" aria-label="Colors"></div>
-    </footer>
+    </div>
 
     <input id="file" type="file" accept="image/*" hidden />
 
@@ -61,6 +66,13 @@
         <section>
           <h3>Starting brush size</h3>
           <div id="settings-size" class="choice-grid"></div>
+        </section>
+        <section>
+          <h3>Layout</h3>
+          <label class="choice wide">
+            <input id="settings-lefty" type="checkbox" />
+            <span class="choice-body">Left-handed: put tools and colors on the right</span>
+          </label>
         </section>
         <section>
           <h3>Magic wand</h3>
@@ -105,10 +117,10 @@
     <dialog id="clear-dialog" class="confirm">
       <form method="dialog">
         <p class="confirm-title">Start over?</p>
-        <p class="hint">You can still undo this.</p>
+        <p class="hint">“Clear drawing” keeps the picture and can be undone. “New blank page” starts fresh, sized to fit the screen, and can’t be undone.</p>
         <div class="confirm-actions">
           <button value="drawing" class="danger">Clear drawing</button>
-          <button value="all" class="danger">Clear drawing and picture</button>
+          <button value="new" class="danger">New blank page</button>
           <button value="cancel">Cancel</button>
         </div>
       </form>

@@ -1,6 +1,6 @@
 // Wires the document, input, view model and views together.
 
-import { WIDTH, HEIGHT, canvasToBlob } from './render.js';
+import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
 import { loadConfig } from './config.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
@@ -15,18 +15,58 @@ import { DetectionOverlay, speak } from './views/detections.js';
 
 const $ = (id) => document.getElementById(id);
 
-for (const canvas of $('paper').querySelectorAll('canvas')) {
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
-}
-
 const vm = new AppViewModel(loadConfig());
-const doc = new DrawingDocument($('bg'), $('draw'));
+const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.brush);
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
 const detections = new DetectionOverlay($('detections'));
+
+// --- Page shape ----------------------------------------------------------
+// The paper fills the space between the toolbars. A new page takes the shape of that
+// space; if the screen is rotated later, the page keeps its shape and is fitted in.
+
+function syncPaperShape() {
+  $('paper').style.setProperty('--page-w', doc.width);
+  $('paper').style.setProperty('--page-h', doc.height);
+}
+doc.addEventListener('resize', syncPaperShape);
+syncPaperShape();
+
+function screenPageSize() {
+  const stage = $('stage');
+  const style = getComputedStyle(stage);
+  const w = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const h = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const aspect = Math.min(2, Math.max(0.5, w / h || 4 / 3));
+  return aspect >= 1
+    ? { width: PAGE_LONG_SIDE, height: Math.round(PAGE_LONG_SIDE / aspect) }
+    : { width: Math.round(PAGE_LONG_SIDE * aspect), height: PAGE_LONG_SIDE };
+}
+
+function newPageForScreen() {
+  const { width, height } = screenPageSize();
+  doc.newPage(width, height);
+}
+
+// A blank page follows the screen, e.g. when the iPad is rotated before drawing starts.
+function refitBlankPage() {
+  if (!doc.isBlank) return;
+  const { width, height } = screenPageSize();
+  if (Math.abs(width / height - doc.width / doc.height) > 0.03) doc.newPage(width, height);
+}
+let refitTimer;
+new ResizeObserver(() => {
+  clearTimeout(refitTimer);
+  refitTimer = setTimeout(refitBlankPage, 250);
+}).observe($('stage'));
+
+function syncHandedness() {
+  document.body.dataset.hand = vm.config.leftHanded ? 'left' : 'right';
+}
+vm.addEventListener('change', syncHandedness);
+syncHandedness();
 
 // --- Toast ---------------------------------------------------------------
 
@@ -125,6 +165,7 @@ $('create-go').addEventListener('click', async () => {
       model: imageModels[provider],
       apiKey: loadApiKeys()[provider],
       idea,
+      aspect: doc.width / doc.height,
       signal: generation.signal,
     });
     await doc.importBackground(blob, { lineArt: true });
@@ -148,13 +189,13 @@ $('create-dialog').addEventListener('close', () => generation?.abort());
 
 $('clear').addEventListener('click', () => {
   const dialog = $('clear-dialog');
-  dialog.querySelector('[value="all"]').hidden = !doc.background;
   dialog.returnValue = '';
   dialog.showModal();
 });
 $('clear-dialog').addEventListener('close', (e) => {
   const choice = e.target.returnValue;
-  if (choice === 'drawing' || choice === 'all') doc.commit({ type: 'clear', all: choice === 'all' });
+  if (choice === 'drawing') doc.commit({ type: 'clear', all: false });
+  if (choice === 'new') newPageForScreen();
 });
 
 $('export').addEventListener('click', async () => {
@@ -258,5 +299,6 @@ try {
 } catch (error) {
   console.warn('Could not restore the last drawing', error);
 }
+refitBlankPage();
 syncActions();
 document.body.dataset.ready = 'true';

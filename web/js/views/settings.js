@@ -82,6 +82,7 @@ export class SettingsView {
       ...SIZES.map((s) => choice('radio', 'size', s.id, s.label, () => vm.setDefaultSize(s.id))),
     );
     q('#settings-ai').addEventListener('change', (e) => vm.setAIEnabled(e.target.checked));
+    q('#settings-lefty').addEventListener('change', (e) => vm.setLeftHanded(e.target.checked));
 
     q('#settings-imagegen').addEventListener('change', (e) => vm.setImageGenEnabled(e.target.checked));
     q('#settings-provider').replaceChildren(
@@ -109,6 +110,7 @@ export class SettingsView {
     }
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
     this.dialog.querySelector('#settings-ai').checked = config.enableAI;
+    this.dialog.querySelector('#settings-lefty').checked = config.leftHanded;
 
     const q = (sel) => this.dialog.querySelector(sel);
     const provider = PROVIDERS[config.imageProvider];

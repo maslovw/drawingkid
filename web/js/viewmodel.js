@@ -57,6 +57,10 @@ export class AppViewModel extends EventTarget {
     this.#updateConfig({ enableAI: enabled });
   }
 
+  setLeftHanded(leftHanded) {
+    this.#updateConfig({ leftHanded });
+  }
+
   setImageGenEnabled(enabled) {
     this.#updateConfig({ enableImageGen: enabled });
   }

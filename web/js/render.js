@@ -1,7 +1,10 @@
 // Pure drawing helpers: stroke rendering and flood fill.
 
-export const WIDTH = 2048;
-export const HEIGHT = 1536;
+// Pages are sized to the screen when started; this is the size of pages saved before that.
+export const DEFAULT_SIZE = Object.freeze({ width: 2048, height: 1536 });
+
+// Long side of a page in canvas pixels (the short side follows the screen's shape).
+export const PAGE_LONG_SIDE = 2048;
 
 // Per-tool look. `width` multiplies the brush size.
 const TOOL_STYLES = {
@@ -11,7 +14,7 @@ const TOOL_STYLES = {
   eraser: { width: 2.5, alpha: 1 },
 };
 
-export function createCanvas(width = WIDTH, height = HEIGHT) {
+export function createCanvas(width, height) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;

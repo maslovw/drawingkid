@@ -110,14 +110,30 @@ export function coloringPrompt(idea) {
     `A coloring page for a young child showing: ${idea.trim()}.`,
     'Black and white line art only: thick, clean, closed black outlines on a pure white background.',
     'Simple, friendly, cartoon style with large open areas to color in.',
-    'No shading, no gray, no color fills, no hatching, no text, no border. Landscape composition.',
+    'No shading, no gray, no color fills, no hatching, no text, no border.',
   ].join(' ');
 }
 
 export class ImageGenError extends Error {}
 
 // Returns a Blob (PNG/JPEG) of the generated page.
-export async function generateColoringPage({ provider, model, apiKey, idea, signal }) {
+const GEMINI_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+
+// Closest shape each provider can produce for a page of the given width/height ratio.
+function openAISize(aspect) {
+  if (aspect > 1.2) return '1536x1024';
+  if (aspect < 0.83) return '1024x1536';
+  return '1024x1024';
+}
+
+function geminiRatio(aspect) {
+  const value = (r) => r.split(':').reduce((a, b) => a / b);
+  return GEMINI_RATIOS.reduce((best, r) =>
+    Math.abs(Math.log(value(r) / aspect)) < Math.abs(Math.log(value(best) / aspect)) ? r : best,
+  );
+}
+
+export async function generateColoringPage({ provider, model, apiKey, idea, aspect = 4 / 3, signal }) {
   if (!apiKey) throw new ImageGenError('Add an API key in Settings first.');
   const prompt = coloringPrompt(idea);
   const name = PROVIDERS[provider].label;
@@ -128,7 +144,7 @@ export async function generateColoringPage({ provider, model, apiKey, idea, sign
           method: 'POST',
           signal,
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, prompt, n: 1, size: '1536x1024', quality: 'medium' }),
+          body: JSON.stringify({ model, prompt, n: 1, size: openAISize(aspect), quality: 'medium' }),
         })
       : await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -138,7 +154,7 @@ export async function generateColoringPage({ provider, model, apiKey, idea, sign
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: '4:3' } },
+              generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: geminiRatio(aspect) } },
             }),
           },
         );

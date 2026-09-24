@@ -34,8 +34,6 @@ html {
 }
 
 body {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
   background: var(--bg);
   overflow: hidden;
   user-select: none;
@@ -60,46 +58,148 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* ---- Top bar ---- */
+/* ---- Layout ----
+   The paper gets all the space the controls don't need. Controls sit at the edges,
+   with touch targets of 44pt or more:
+   - Landscape: side rails. Tools and colors are on the non-drawing hand's side (left for
+     right-handers, like Procreate's sidebar); undo and actions are on the other side.
+     Height is the scarce dimension on an iPad mini in landscape, so nothing goes on top.
+   - Portrait: a slim action bar on top, tools and colors along the bottom. */
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 16px;
+.app {
+  height: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'history actions'
+    'stage   stage'
+    'tools   sizes'
+    'colors  colors';
 }
 
-.brand {
-  margin: 0;
-  font-size: 1.3rem;
-  white-space: nowrap;
+/* In portrait the rails dissolve and their groups sit directly in the grid. */
+.rail {
+  display: contents;
+}
+
+.history { grid-area: history; }
+.actions { grid-area: actions; }
+.stage { grid-area: stage; }
+.tools { grid-area: tools; }
+.sizes { grid-area: sizes; }
+.colors { grid-area: colors; }
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  min-width: 0;
+  min-height: 0;
 }
 
 .actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-self: end;
 }
+
+.sizes {
+  justify-self: start;
+}
+
+.colors {
+  justify-self: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.spacer {
+  width: 12px;
+  height: 12px;
+}
+
+@media (orientation: landscape) and (min-height: 460px) {
+  .app {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'start colors stage end';
+  }
+
+  body[data-hand='left'] .app {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'end stage colors start';
+  }
+
+  .rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .rail-start {
+    grid-area: start;
+  }
+
+  .rail-end {
+    grid-area: end;
+  }
+
+  .rail .group {
+    grid-area: auto;
+    flex: none;
+  }
+
+  .rail .actions {
+    flex: 0 1 auto;
+  }
+
+  .group {
+    flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .colors {
+    align-self: start;
+    flex-wrap: nowrap;
+  }
+
+  .spacer {
+    height: 6px;
+  }
+}
+
+/* ---- Buttons ---- */
 
 .action {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 60px;
-  padding: 6px 8px;
+  justify-content: center;
+  flex: none;
+  width: 58px;
+  height: 56px;
+  padding: 2px;
   border: none;
-  border-radius: 14px;
-  background: var(--panel);
-  box-shadow: var(--shadow);
-  font-size: 1.5rem;
+  border-radius: 12px;
+  background: none;
   line-height: 1.1;
+}
+
+.action .icon {
+  font-size: 1.45rem;
 }
 
 .action .caption,
 .tool .caption {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--muted);
 }
 
@@ -107,75 +207,24 @@ button:focus-visible {
   background: linear-gradient(135deg, #fff1b8, #ffd6f0);
 }
 
-.action[aria-busy='true'] > span:first-child {
+.action[aria-busy='true'] .icon {
   display: inline-block;
   animation: wiggle 0.6s ease-in-out infinite;
-}
-
-/* ---- Paper ---- */
-
-.stage {
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  padding: 4px 16px;
-  container-type: size;
-}
-
-.paper {
-  position: relative;
-  width: min(100cqw, calc(100cqh * 4 / 3));
-  aspect-ratio: 4 / 3;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
-  touch-action: none;
-  cursor: crosshair;
-}
-
-.paper canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* ---- Bottom toolbar ---- */
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 10px 18px;
-  padding: 10px 16px 14px;
-}
-
-.group {
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  border-radius: var(--radius);
-  background: var(--panel);
-  box-shadow: var(--shadow);
-}
-
-.colors {
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 .tool {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 64px;
-  padding: 6px 4px;
+  justify-content: center;
+  flex: none;
+  width: 60px;
+  height: 56px;
+  padding: 2px;
   border: 3px solid transparent;
   border-radius: 14px;
   background: none;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   line-height: 1.1;
 }
 
@@ -187,8 +236,9 @@ button:focus-visible {
 .size {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  flex: none;
+  width: 48px;
+  height: 48px;
   border: 3px solid transparent;
   border-radius: 50%;
   background: #f4f1ec;
@@ -204,8 +254,9 @@ button:focus-visible {
 }
 
 .swatch {
-  width: 52px;
-  height: 52px;
+  flex: none;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 3px solid rgb(0 0 0 / 0.1);
   background: var(--swatch);
@@ -213,9 +264,41 @@ button:focus-visible {
 }
 
 .swatch[aria-pressed='true'] {
-  transform: scale(1.12);
+  transform: scale(1.1);
   border-color: var(--panel);
   box-shadow: 0 0 0 3px var(--accent);
+}
+
+/* ---- Paper ---- */
+
+.stage {
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+
+.paper {
+  --page-w: 4;
+  --page-h: 3;
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--page-w) / var(--page-h)));
+  aspect-ratio: var(--page-w) / var(--page-h);
+  max-width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 0.12);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.paper canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ---- AI detections ---- */
@@ -443,7 +526,7 @@ dialog::backdrop {
 .toast {
   position: fixed;
   left: 50%;
-  top: calc(env(safe-area-inset-top) + 84px);
+  top: calc(env(safe-area-inset-top, 0px) + 76px);
   transform: translateX(-50%);
   max-width: min(90vw, 560px);
   padding: 12px 20px;
@@ -453,19 +536,6 @@ dialog::backdrop {
   font-size: 1.05rem;
   text-align: center;
   pointer-events: none;
-}
-
-@media (max-width: 820px) {
-  .brand {
-    display: none;
-  }
-  .actions {
-    justify-content: center;
-    width: 100%;
-  }
-  .action {
-    min-width: 50px;
-  }
 }
 
 /* ---- Save preview ---- */

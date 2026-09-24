@@ -1,6 +1,6 @@
 // Turns pointer input (Apple Pencil, finger, mouse) into document ops, with a live preview.
 
-import { WIDTH, HEIGHT, drawStroke } from './render.js';
+import { drawStroke } from './render.js';
 
 const MIN_POINT_DISTANCE = 2; // canvas px
 
@@ -23,8 +23,8 @@ export class CanvasInput {
     const rect = this.surface.getBoundingClientRect();
     const round = (v) => Math.round(v * 10) / 10;
     return [
-      round(((e.clientX - rect.left) * WIDTH) / rect.width),
-      round(((e.clientY - rect.top) * HEIGHT) / rect.height),
+      round(((e.clientX - rect.left) * this.doc.width) / rect.width),
+      round(((e.clientY - rect.top) * this.doc.height) / rect.height),
     ];
   }
 
@@ -78,7 +78,7 @@ export class CanvasInput {
     this.frame = 0;
     const active = this.active;
     this.active = null;
-    this.liveCtx.clearRect(0, 0, WIDTH, HEIGHT);
+    this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
     return active;
   }
 
@@ -92,7 +92,7 @@ export class CanvasInput {
         // Erasing is idempotent, so redrawing the whole path each frame is safe.
         drawStroke(this.doc.drawCtx, stroke);
       } else {
-        this.liveCtx.clearRect(0, 0, WIDTH, HEIGHT);
+        this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
         drawStroke(this.liveCtx, stroke);
       }
     });

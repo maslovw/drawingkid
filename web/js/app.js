@@ -10,6 +10,7 @@ import { detectObjects, emojiFor } from './ai.js';
 import { PROVIDERS, generateColoringPage, loadApiKeys } from './imagegen.js';
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
+import { ParentGate } from './views/parentgate.js';
 import { DetectionOverlay, speak } from './views/detections.js';
 
 const $ = (id) => document.getElementById(id);
@@ -24,6 +25,7 @@ const doc = new DrawingDocument($('bg'), $('draw'));
 new CanvasInput($('paper'), $('live'), doc, () => vm.brush);
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
+const parentGate = new ParentGate($('gate-dialog'));
 const detections = new DetectionOverlay($('detections'));
 
 // --- Toast ---------------------------------------------------------------
@@ -55,7 +57,9 @@ vm.addEventListener('change', syncActions);
 
 $('undo').addEventListener('click', () => doc.undo());
 $('redo').addEventListener('click', () => doc.redo());
-$('settings').addEventListener('click', () => settings.open());
+$('settings').addEventListener('click', async () => {
+  if (await parentGate.ask()) settings.open();
+});
 
 $('import').addEventListener('click', () => $('file').click());
 $('file').addEventListener('change', async (e) => {

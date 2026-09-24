@@ -434,7 +434,7 @@ dialog::backdrop {
   margin-top: 18px;
 }
 
-.confirm-actions button:not(.danger) {
+.confirm-actions button:not(.danger, .primary) {
   background: #f2efe9;
 }
 
@@ -517,7 +517,9 @@ dialog::backdrop {
 }
 
 .field-grid input,
-.create input[type='text'] {
+.field-grid select,
+.create input[type='text'],
+.gate input {
   width: 100%;
   padding: 10px 12px;
   border: 2px solid #e8e2d8;
@@ -528,7 +530,9 @@ dialog::backdrop {
 }
 
 .field-grid input:focus,
-.create input[type='text']:focus {
+.field-grid select:focus,
+.create input[type='text']:focus,
+.gate input:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -564,4 +568,70 @@ dialog::backdrop {
 
 .create[aria-busy='true'] #create-go {
   opacity: 0.6;
+}
+
+.model-row {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.model-row select {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+}
+
+.secondary {
+  flex: none;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 12px;
+  background: #f2efe9;
+  font-weight: 600;
+}
+
+#settings-model-status:empty,
+#gate-hint:empty {
+  display: none;
+}
+
+/* ---- Parent gate ---- */
+
+.gate {
+  width: min(380px, 92vw);
+}
+
+.gate-question {
+  margin: 16px 0 8px;
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gate input {
+  width: 8ch;
+  text-align: center;
+  font-size: 1.6rem;
+}
+
+.gate.shake {
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  25% {
+    translate: -8px 0;
+  }
+  75% {
+    translate: 8px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate.shake,
+  .detection.bounce,
+  .particle {
+    animation: none;
+  }
 }

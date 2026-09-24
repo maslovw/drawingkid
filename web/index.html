@@ -81,12 +81,15 @@
           </label>
           <div id="settings-provider" class="choice-grid provider-grid"></div>
           <div class="field-grid">
-            <label for="settings-model">Model</label>
-            <input id="settings-model" type="text" list="settings-model-list" autocomplete="off" spellcheck="false" />
-            <datalist id="settings-model-list"></datalist>
             <label for="settings-key">API key</label>
             <input id="settings-key" type="password" autocomplete="off" spellcheck="false" />
+            <label for="settings-model">Model</label>
+            <div class="model-row">
+              <select id="settings-model"></select>
+              <button id="settings-refresh" type="button" class="secondary" title="Ask the provider which image models your key can use">↻ Refresh</button>
+            </div>
           </div>
+          <p id="settings-model-status" class="hint" role="status"></p>
           <p class="hint">
             Turns one sentence into a black-and-white page to color. Uses your own API key
             (<a id="settings-key-link" href="#" target="_blank" rel="noopener">get one</a>), which is stored only in this browser
@@ -119,6 +122,20 @@
         <div class="confirm-actions">
           <button id="save-download" type="button" class="primary">Download</button>
           <button value="close">Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="gate-dialog" class="confirm gate">
+      <form id="gate-form">
+        <p class="confirm-title">Grown-ups only</p>
+        <p class="hint">Solve this to open Settings.</p>
+        <p id="gate-question" class="gate-question"></p>
+        <input id="gate-answer" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" aria-labelledby="gate-question" />
+        <p id="gate-hint" class="hint" role="status"></p>
+        <div class="confirm-actions">
+          <button type="submit" class="primary">Open Settings</button>
+          <button id="gate-cancel" type="button">Cancel</button>
         </div>
       </form>
     </dialog>

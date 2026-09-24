@@ -1,7 +1,7 @@
 // Settings dialog: choose which tools and colors appear on the main screen.
 
 import { TOOLS, COLORS, SIZES } from '../config.js';
-import { PROVIDERS, loadApiKeys, saveApiKey } from '../imagegen.js';
+import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels } from '../imagegen.js';
 
 export class SettingsView {
   constructor(dialog, vm) {
@@ -13,8 +13,47 @@ export class SettingsView {
   }
 
   open() {
+    this.dialog.querySelector('#settings-model-status').textContent = '';
     this.#sync();
     this.dialog.showModal();
+  }
+
+  // Options: known models for this provider, plus the saved choice if it isn't among them.
+  #fillModels() {
+    const { imageProvider, imageModels } = this.vm.config;
+    const current = imageModels[imageProvider];
+    const models = knownModels(imageProvider);
+    const select = this.dialog.querySelector('#settings-model');
+    select.replaceChildren(...[...new Set([...models, current])].map((m) => new Option(m, m)));
+    select.value = current;
+  }
+
+  async #refreshModels() {
+    const q = (sel) => this.dialog.querySelector(sel);
+    const provider = this.vm.config.imageProvider;
+    const key = q('#settings-key').value.trim();
+    const button = q('#settings-refresh');
+    const status = q('#settings-model-status');
+    button.disabled = true;
+    status.textContent = `Asking ${PROVIDERS[provider].label} for its image models…`;
+    try {
+      const models = await refreshModels(provider, key);
+      saveApiKey(provider, key);
+      if (this.vm.config.imageProvider !== provider) return; // switched provider meanwhile
+      this.#fillModels();
+      status.textContent = `Found ${models.length} image model${models.length === 1 ? '' : 's'}. Pick one from the list.`;
+      const select = q('#settings-model');
+      select.focus();
+      try {
+        select.showPicker(); // open the list right away where the browser allows it
+      } catch {
+        // Not supported, or the click's user activation has expired.
+      }
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
   }
 
   #build() {
@@ -50,6 +89,7 @@ export class SettingsView {
     );
     q('#settings-model').addEventListener('change', (e) => vm.setImageModel(vm.config.imageProvider, e.target.value));
     q('#settings-key').addEventListener('change', (e) => saveApiKey(vm.config.imageProvider, e.target.value.trim()));
+    q('#settings-refresh').addEventListener('click', () => this.#refreshModels());
     q('#settings-reset').addEventListener('click', () => vm.resetConfig());
   }
 
@@ -74,8 +114,7 @@ export class SettingsView {
     const provider = PROVIDERS[config.imageProvider];
     q('#settings-imagegen').checked = config.enableImageGen;
     for (const input of inputs('provider')) input.checked = input.value === config.imageProvider;
-    q('#settings-model').value = config.imageModels[config.imageProvider];
-    q('#settings-model-list').replaceChildren(...provider.models.map((m) => new Option(m, m)));
+    this.#fillModels();
     q('#settings-key').value = loadApiKeys()[config.imageProvider] ?? '';
     q('#settings-key').placeholder = provider.keyHint;
     q('#settings-key-link').href = provider.keyUrl;

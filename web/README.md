@@ -26,7 +26,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Palette | 10 colors, 3 brush sizes. Picking a color while erasing switches back to the last drawing tool. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
-| Settings | Choose which tools and colors appear, the starting brush size, and whether the magic wand is shown. Saved in `localStorage`. |
+| Settings | Choose which tools and colors appear, the starting brush size, and whether the magic wand is shown. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
 | Magic wand | Detects objects and shows tappable boxes. Tapping one says what it is aloud and plays an emoji burst. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
@@ -46,10 +46,10 @@ The **Create** button turns one sentence into a coloring page. It works with eit
 
 | Provider | Default model | Get a key |
 |---|---|---|
-| OpenAI (GPT Image) | `gpt-image-1` | https://platform.openai.com/api-keys (image models may require organization verification) |
+| OpenAI (GPT Image) | `gpt-image-2.5-flare` | https://platform.openai.com/api-keys (image models may require organization verification) |
 | Google Gemini ("Nano Banana") | `gemini-3.1-flash-image` | https://aistudio.google.com/apikey |
 
-Model names change often, so the model is an editable field in Settings (with suggestions such as `gpt-image-1.5`, `gpt-image-2`, `gemini-2.5-flash-image`). If the provider rejects a model, the app shows the provider's error message.
+Model names change often, so Settings has a **Refresh** button next to the model list. It asks the provider which image models your key can use (`GET /v1/models` for OpenAI, `models.list` for Gemini), fills the dropdown newest first and opens it. The list is remembered in this browser. Before the first refresh, the dropdown offers built-in suggestions: `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1` for OpenAI, and `gemini-3.1-flash-image`, `gemini-3.1-flash-image-preview`, `gemini-2.5-flash-image` for Gemini. OpenAI shuts down `gpt-image-1.5` and `gpt-image-1-mini` on December 1, 2026. If the provider rejects a model, the app shows the provider's error message.
 
 The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The page becomes the background layer, and undo removes it.
 
@@ -74,6 +74,7 @@ web/
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog
+        ├── parentgate.js grown-ups-only math check
         └── detections.js tappable detection overlay
 ```
 

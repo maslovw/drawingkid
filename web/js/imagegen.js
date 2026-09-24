@@ -4,8 +4,9 @@
 export const PROVIDERS = {
   openai: {
     label: 'OpenAI',
-    defaultModel: 'gpt-image-1',
-    models: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'gpt-image-1-mini'],
+    // Sept 2026: 2.5 Flare is OpenAI's recommended default; 1.5 and 1-mini shut down Dec 1, 2026.
+    defaultModel: 'gpt-image-2.5-flare',
+    models: ['gpt-image-2.5-flare', 'gpt-image-2.5-sunburst', 'gpt-image-2', 'gpt-image-1'],
     keyHint: 'sk-…',
     keyUrl: 'https://platform.openai.com/api-keys',
   },
@@ -19,6 +20,7 @@ export const PROVIDERS = {
 };
 
 const KEYS_STORAGE = 'drawingkid.apikeys';
+const MODELS_STORAGE = 'drawingkid.models';
 
 export function loadApiKeys() {
   try {
@@ -37,6 +39,70 @@ export function saveApiKey(provider, key) {
   } catch {
     // Storage unavailable: the key only lasts until reload.
   }
+}
+
+// Model list shown in Settings: the last refreshed list, or the built-in suggestions.
+export function knownModels(provider) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(MODELS_STORAGE))?.[provider];
+    if (cached?.length) return cached;
+  } catch {
+    // fall through to built-ins
+  }
+  return PROVIDERS[provider].models;
+}
+
+// Asks the provider which image models this key can use, newest first, and caches them.
+export async function refreshModels(provider, apiKey) {
+  if (!apiKey) throw new ImageGenError('Add an API key first.');
+  const name = PROVIDERS[provider].label;
+  let models;
+  try {
+    models = provider === 'openai' ? await listOpenAIModels(apiKey) : await listGeminiModels(apiKey);
+  } catch (error) {
+    if (error instanceof ImageGenError) throw error;
+    throw new ImageGenError(`Couldn't reach ${name}. Check the internet connection.`);
+  }
+  if (!models.length) throw new ImageGenError(`${name} didn't list any image models for this key.`);
+  try {
+    const all = JSON.parse(localStorage.getItem(MODELS_STORAGE)) ?? {};
+    all[provider] = models;
+    localStorage.setItem(MODELS_STORAGE, JSON.stringify(all));
+  } catch {
+    // Not cached; the list is still returned.
+  }
+  return models;
+}
+
+async function listOpenAIModels(apiKey) {
+  const body = await getJson('https://api.openai.com/v1/models', { Authorization: `Bearer ${apiKey}` }, 'OpenAI');
+  return (body.data ?? [])
+    .filter((m) => /^(gpt-image|chatgpt-image)/.test(m.id))
+    .sort((a, b) => b.created - a.created || a.id.localeCompare(b.id))
+    .map((m) => m.id);
+}
+
+async function listGeminiModels(apiKey) {
+  const models = [];
+  let pageToken = '';
+  do {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+    const body = await getJson(url, { 'x-goog-api-key': apiKey }, 'Gemini');
+    models.push(...(body.models ?? []));
+    pageToken = body.nextPageToken ?? '';
+  } while (pageToken);
+  // Nano Banana models are the Gemini models that generate images via generateContent.
+  return models
+    .filter((m) => /image/.test(m.name) && m.supportedGenerationMethods?.includes('generateContent'))
+    .map((m) => m.name.replace(/^models\//, ''))
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+}
+
+async function getJson(url, headers, name) {
+  const response = await fetch(url, { headers });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) throw new ImageGenError(`${name} said: ${body?.error?.message ?? `HTTP ${response.status}`}`);
+  return body ?? {};
 }
 
 export function coloringPrompt(idea) {

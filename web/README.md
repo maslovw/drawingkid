@@ -14,6 +14,19 @@ python3 -m http.server 8000
 
 To try it on an iPad on the same Wi-Fi, open `http://<your-computer-ip>:8000`. Sharing to Photos uses the Web Share API, which needs HTTPS (or `localhost`). Over plain HTTP the Save button downloads a PNG instead.
 
+### HTTPS for the iPad
+
+`serve-https.sh` serves the same folder over HTTPS with a certificate from [mkcert](https://github.com/FiloSottile/mkcert), so the share sheet works on the iPad too:
+
+```bash
+brew install mkcert && mkcert -install   # once per Mac; asks for your password
+cd web
+./serve-https.sh ca   # once per iPad; prints the steps to install and trust the CA
+./serve-https.sh      # open https://<your-computer-ip>:8443
+```
+
+The iPad has to trust the CA in **Settings → General → About → Certificate Trust Settings** after installing the profile. Until then the server logs `certificate unknown` and Safari won't load the page. The certificate is kept in `~/.cache/drawingkid-certs` and is reissued automatically when the Mac's Wi-Fi IP changes. The iPad doesn't need to be set up again. Set `PORT` to use a port other than 8443.
+
 ## Deploy
 
 Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Cloudflare Pages or S3. All of them serve HTTPS, which also enables the iPad share sheet.

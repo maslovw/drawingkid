@@ -1,0 +1,11 @@
+{
+  "apiKeys": {
+    "openai": "sk-your-openai-key",
+    "gemini": "AIza-your-gemini-key"
+  },
+  "imageProvider": "openai",
+  "imageModels": {
+    "openai": "gpt-image-2.5-flare",
+    "gemini": "gemini-3.1-flash-image"
+  }
+}

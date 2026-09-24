@@ -1,7 +1,7 @@
 // Settings dialog: choose which tools and colors appear on the main screen.
 
 import { TOOLS, COLORS, SIZES } from '../config.js';
-import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels } from '../imagegen.js';
+import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels, isManagedKey } from '../imagegen.js';
 
 export class SettingsView {
   constructor(dialog, vm) {
@@ -29,9 +29,10 @@ export class SettingsView {
   }
 
   async #refreshModels() {
+    if (this.vm.isManaged('imageModels', this.vm.config.imageProvider)) return;
     const q = (sel) => this.dialog.querySelector(sel);
     const provider = this.vm.config.imageProvider;
-    const key = q('#settings-key').value.trim();
+    const key = isManagedKey(provider) ? loadApiKeys()[provider] : q('#settings-key').value.trim();
     const button = q('#settings-refresh');
     const status = q('#settings-model-status');
     button.disabled = true;
@@ -109,6 +110,9 @@ export class SettingsView {
       }
     }
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
+    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-ai, #settings-lefty, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
+      el.disabled = false;
+    }
     this.dialog.querySelector('#settings-ai').checked = config.enableAI;
     this.dialog.querySelector('#settings-lefty').checked = config.leftHanded;
 
@@ -120,6 +124,36 @@ export class SettingsView {
     q('#settings-key').value = loadApiKeys()[config.imageProvider] ?? '';
     q('#settings-key').placeholder = provider.keyHint;
     q('#settings-key-link').href = provider.keyUrl;
+    this.#lockManaged();
+  }
+
+  // Controls for settings fixed by config.local.json are shown but locked.
+  #lockManaged() {
+    const { vm } = this;
+    const q = (sel) => this.dialog.querySelector(sel);
+    const inputs = (name) => [...this.dialog.querySelectorAll(`input[name="${name}"]`)];
+    const lock = (els, managed) => {
+      for (const el of els) {
+        if (managed) el.disabled = true;
+        el.closest('.choice')?.classList.toggle('managed', managed);
+      }
+    };
+    const provider = vm.config.imageProvider;
+    lock(inputs('tools'), vm.isManaged('visibleTools'));
+    lock(inputs('colors'), vm.isManaged('visibleColors'));
+    lock(inputs('size'), vm.isManaged('defaultSize'));
+    lock([q('#settings-ai')], vm.isManaged('enableAI'));
+    lock([q('#settings-lefty')], vm.isManaged('leftHanded'));
+    lock([q('#settings-imagegen')], vm.isManaged('enableImageGen'));
+    lock(inputs('provider'), vm.isManaged('imageProvider'));
+    const modelManaged = vm.isManaged('imageModels', provider);
+    q('#settings-model').disabled = modelManaged;
+    q('#settings-refresh').disabled = modelManaged;
+    const keyManaged = isManagedKey(provider);
+    q('#settings-key').disabled = keyManaged;
+    if (keyManaged) q('#settings-key').value = '••••••••••••';
+    const anyManaged = Object.keys(vm.managed).length > 0 || Object.keys(PROVIDERS).some(isManagedKey);
+    q('#settings-managed').hidden = !anyManaged;
   }
 }
 

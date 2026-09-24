@@ -1,13 +1,13 @@
 // Wires the document, input, view model and views together.
 
 import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
-import { loadConfig } from './config.js';
+import { loadConfig, loadServerConfig } from './config.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
 import { loadDrawing, saveDrawing } from './storage.js';
 import { detectObjects, emojiFor } from './ai.js';
-import { PROVIDERS, generateColoringPage, loadApiKeys } from './imagegen.js';
+import { PROVIDERS, generateColoringPage, loadApiKeys, setManagedApiKeys } from './imagegen.js';
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { ParentGate } from './views/parentgate.js';
@@ -15,7 +15,9 @@ import { DetectionOverlay, speak } from './views/detections.js';
 
 const $ = (id) => document.getElementById(id);
 
-const vm = new AppViewModel(loadConfig());
+const server = await loadServerConfig();
+setManagedApiKeys(server.apiKeys);
+const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.brush);
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);

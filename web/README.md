@@ -33,6 +33,26 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
 
+## Shared settings: `config.local.json`
+
+To set things up once for every device, copy `config.local.example.json` to `config.local.json` in the same folder as `index.html` and fill it in:
+
+```json
+{
+  "apiKeys": { "openai": "sk-…", "gemini": "AIza…" },
+  "imageProvider": "openai",
+  "imageModels": { "openai": "gpt-image-2.5-flare" }
+}
+```
+
+Every device that opens the app from this server loads the file at startup:
+
+- **API keys** in the file are used on every device and can't be viewed or changed in Settings.
+- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `enableAI`, `leftHanded`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
+- Changes take effect the next time the app is opened or reloaded.
+
+`config.local.json` is in `.gitignore`, so keys don't end up in the repository. The server hands the file to anyone who can reach it, so anyone on your home network could read the keys. Serve the app only on your home network, and use keys with a spending limit.
+
 ## Layout (tuned for iPad mini)
 
 The iPad mini's screen is 1133×744 points, and Safari's bars take more of the height. The paper takes about 77% of the screen in either orientation.
@@ -63,13 +83,14 @@ Model names change often, so Settings has a **Refresh** button next to the model
 
 The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The page becomes the background layer, and undo removes it.
 
-The browser calls the provider's API directly with the key, which is stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
+The browser calls the provider's API directly with the key. The key comes from `config.local.json` (see above) or is typed in Settings and stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
 
 ## Code layout
 
 ```
 web/
 ├── index.html            markup, dialogs
+├── config.local.example.json  template for shared settings and API keys
 ├── styles.css
 └── js/
     ├── app.js            wiring: buttons, autosave, magic wand, shortcuts

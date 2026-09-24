@@ -1,15 +1,23 @@
 // UI state: selected tool/color/size and the AppConfig. Views listen for 'change'.
 
-import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, normalizeConfig, saveConfig } from './config.js';
+import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig } from './config.js';
 
 export class AppViewModel extends EventTarget {
-  constructor(config) {
+  // `managed` holds settings fixed by the server's config.local.json.
+  constructor(config, managed = {}) {
     super();
+    this.managed = managed;
     this.config = config;
     this.tool = config.visibleTools[0];
     this.lastDrawingTool = this.tool;
     this.color = config.visibleColors[0];
     this.size = config.defaultSize;
+  }
+
+  // True when config.local.json sets this (for imageModels: this provider's model).
+  isManaged(key, provider) {
+    if (!(key in this.managed)) return false;
+    return key === 'imageModels' ? provider in (this.managed.imageModels ?? {}) : true;
   }
 
   get brush() {
@@ -79,7 +87,7 @@ export class AppViewModel extends EventTarget {
   }
 
   #updateConfig(patch) {
-    this.config = normalizeConfig({ ...this.config, ...patch });
+    this.config = applyManaged({ ...this.config, ...patch }, this.managed);
     saveConfig(this.config);
     // Keep the current selection valid if it was just hidden.
     if (!this.config.visibleTools.includes(this.tool)) this.tool = this.config.visibleTools[0];

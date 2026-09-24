@@ -43,14 +43,44 @@ export const DEFAULT_CONFIG = Object.freeze({
 
 const STORAGE_KEY = 'drawingkid.config';
 
-export function loadConfig() {
+const SETTING_KEYS = Object.keys(DEFAULT_CONFIG);
+
+// Optional config.local.json next to index.html, shared by every device that opens the
+// app from this server. Settings it contains win over each device's own choices, and
+// its API keys are used on every device. Missing or invalid file: nothing is managed.
+export async function loadServerConfig() {
+  try {
+    const response = await fetch('config.local.json', { cache: 'no-store' });
+    if (!response.ok) return { settings: {}, apiKeys: {} };
+    const file = await response.json();
+    const settings = Object.fromEntries(SETTING_KEYS.filter((k) => k in file).map((k) => [k, file[k]]));
+    const apiKeys = Object.fromEntries(
+      Object.entries(file.apiKeys ?? {}).filter(([, key]) => typeof key === 'string' && key.trim()),
+    );
+    return { settings, apiKeys };
+  } catch (error) {
+    console.warn('Ignoring config.local.json', error);
+    return { settings: {}, apiKeys: {} };
+  }
+}
+
+// Overlays the server's settings onto a device config (models merge per provider).
+export function applyManaged(config, managed = {}) {
+  return normalizeConfig({
+    ...config,
+    ...managed,
+    imageModels: { ...config.imageModels, ...managed.imageModels },
+  });
+}
+
+export function loadConfig(managed = {}) {
   let saved = {};
   try {
     saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
   } catch {
     // Corrupt or unavailable storage: fall back to defaults.
   }
-  return normalizeConfig({ ...DEFAULT_CONFIG, ...saved });
+  return applyManaged({ ...DEFAULT_CONFIG, ...saved }, managed);
 }
 
 export function saveConfig(config) {

@@ -705,3 +705,21 @@ dialog::backdrop {
     animation: none;
   }
 }
+
+/* ---- Settings managed by config.local.json ---- */
+
+.managed-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f2efe9;
+}
+
+.choice.managed {
+  opacity: 0.6;
+}
+
+.choice.managed .choice-body::after {
+  content: '🔒';
+  margin-left: 4px;
+  font-size: 0.8em;
+}

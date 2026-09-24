@@ -22,7 +22,16 @@ export const PROVIDERS = {
 const KEYS_STORAGE = 'drawingkid.apikeys';
 const MODELS_STORAGE = 'drawingkid.models';
 
-export function loadApiKeys() {
+// Keys from the server's config.local.json; they take precedence over keys typed on a device.
+let managedKeys = {};
+
+export function setManagedApiKeys(keys) {
+  managedKeys = { ...keys };
+}
+
+export const isManagedKey = (provider) => provider in managedKeys;
+
+function deviceApiKeys() {
   try {
     return JSON.parse(localStorage.getItem(KEYS_STORAGE)) ?? {};
   } catch {
@@ -30,8 +39,13 @@ export function loadApiKeys() {
   }
 }
 
+export function loadApiKeys() {
+  return { ...deviceApiKeys(), ...managedKeys };
+}
+
 export function saveApiKey(provider, key) {
-  const keys = loadApiKeys();
+  if (isManagedKey(provider)) return;
+  const keys = deviceApiKeys();
   if (key) keys[provider] = key;
   else delete keys[provider];
   try {

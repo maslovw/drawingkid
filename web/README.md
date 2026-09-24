@@ -25,6 +25,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Tools | Pen, pencil, marker (translucent), fill bucket, eraser. Works with Apple Pencil, touch and mouse. |
 | Multi-touch | Several fingers draw at once, each with the current tool and color. Lines drawn together undo together. While Apple Pencil is down, touches are ignored so a resting palm doesn't draw. |
 | Palette | 10 colors plus two special ones, and 3 brush sizes. **Rainbow** 🌈 changes color smoothly along the line; with the fill bucket it fills an area with a rainbow. **Surprise color** picks a random palette color for every line, tap and finger (never white, never the same twice in a row). Picking a color while erasing switches back to the last drawing tool. |
+| Palettes | Three buttons under the brush sizes switch between **Classic**, **Vibrant** (neon) and **Pastel** colors. Each button shows four dots of its colors. The same color slots are used in every palette, so Settings still chooses which ones show. Rainbow and Surprise follow the palette (a pastel rainbow is soft). Lines already drawn keep their color. The choice is remembered on the device. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
 | Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
@@ -66,8 +67,8 @@ Every device that opens the app from this server loads the file at startup:
 
 The iPad mini's screen is 1133×744 points, and Safari's bars take more of the height. The paper takes about 77% of the screen in either orientation.
 
-- **Landscape:** controls sit in side rails, because height is the scarce dimension. Tools, brush sizes and colors are on the left, within reach of a right-handed child's free hand (the same idea as Procreate's sidebar). Undo, redo and the actions are on the right, with Clear and Settings last. Settings has a **Left-handed** option that swaps the sides.
-- **Portrait:** undo and the actions are in a slim bar on top, and tools, sizes and colors are along the bottom.
+- **Landscape:** controls sit in side rails, because height is the scarce dimension. Tools, brush sizes, palettes and colors are on the left, within reach of a right-handed child's free hand (the same idea as Procreate's sidebar). Undo, redo and the actions are on the right, with Clear and Settings last. Settings has a **Left-handed** option that swaps the sides.
+- **Portrait:** undo and the actions are in a slim bar on top, and tools, sizes, palettes and colors are along the bottom.
 - **Touch targets:** every button is at least 44pt, Apple's minimum; color swatches are 44pt and tool buttons 56–60pt.
 - **Page shape:** a new page takes the shape of the space between the controls, so it fills the screen. If the iPad is rotated after drawing has started, the page keeps its shape and is fitted in; a blank page reshapes itself. **Clear → New blank page** starts a page sized for the current orientation. Generated coloring pages are requested in the closest matching shape.
 

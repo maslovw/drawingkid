@@ -71,13 +71,13 @@ button:focus-visible {
   display: grid;
   gap: 8px;
   padding: 8px;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto auto 1fr;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   grid-template-areas:
-    'history actions'
-    'stage   stage'
-    'tools   sizes'
-    'colors  colors';
+    'history actions  actions'
+    'stage   stage    stage'
+    'tools   sizes    palettes'
+    'colors  colors   colors';
 }
 
 /* In portrait the rails dissolve and their groups sit directly in the grid. */
@@ -90,6 +90,7 @@ button:focus-visible {
 .stage { grid-area: stage; }
 .tools { grid-area: tools; }
 .sizes { grid-area: sizes; }
+.palettes { grid-area: palettes; }
 .colors { grid-area: colors; }
 
 .group {
@@ -145,6 +146,7 @@ button:focus-visible {
 
   .rail-start {
     grid-area: start;
+    overflow-y: auto; /* only if a short window can't fit tools, sizes and palettes */
   }
 
   .rail-end {
@@ -675,4 +677,36 @@ dialog::backdrop {
 
 .glyph .ink {
   fill: var(--ink, #ee5a45);
+}
+
+/* ---- Palette picker ---- */
+
+.palettes {
+  justify-self: start;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(2, 12px);
+  gap: 3px;
+  place-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  background: #f4f1ec;
+}
+
+.palette[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.palette-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgb(46 42 38 / 0.35);
 }

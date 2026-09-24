@@ -10,44 +10,96 @@ export const TOOLS = [
   { id: 'eraser', label: 'Eraser' },
 ];
 
+// Color slots. Each palette fills the same slots, so the Settings choice of which colors
+// to show applies to every palette.
 export const COLORS = [
-  { id: 'black', label: 'Black', value: '#1f1f1f' },
-  { id: 'red', label: 'Red', value: '#e53935' },
-  { id: 'orange', label: 'Orange', value: '#fb8c00' },
-  { id: 'yellow', label: 'Yellow', value: '#fdd835' },
-  { id: 'green', label: 'Green', value: '#43a047' },
-  { id: 'blue', label: 'Blue', value: '#1e88e5' },
-  { id: 'purple', label: 'Purple', value: '#8e24aa' },
-  { id: 'pink', label: 'Pink', value: '#f06292' },
-  { id: 'brown', label: 'Brown', value: '#6d4c41' },
-  { id: 'white', label: 'White', value: '#ffffff' },
-  // Special colors: `value` is resolved per stroke rather than being a fixed color.
-  { id: 'rainbow', label: 'Rainbow', value: 'rainbow', special: true },
-  { id: 'random', label: 'Surprise color', value: 'random', special: true },
+  { id: 'black', label: 'Black' },
+  { id: 'red', label: 'Red' },
+  { id: 'orange', label: 'Orange' },
+  { id: 'yellow', label: 'Yellow' },
+  { id: 'green', label: 'Green' },
+  { id: 'blue', label: 'Blue' },
+  { id: 'purple', label: 'Purple' },
+  { id: 'pink', label: 'Pink' },
+  { id: 'brown', label: 'Brown' },
+  { id: 'white', label: 'White' },
+  // Special colors, resolved per stroke rather than being a fixed color.
+  { id: 'rainbow', label: 'Rainbow', special: true },
+  { id: 'random', label: 'Surprise color', special: true },
 ];
 
+// `tone` is the saturation/lightness (%) of that palette's Rainbow; `preview` is the four
+// slots its picker button shows, chosen so the three buttons look clearly different.
+export const PALETTES = [
+  {
+    id: 'classic',
+    label: 'Classic colors',
+    tone: { s: 85, l: 52 },
+    preview: ['red', 'yellow', 'blue', 'green'],
+    colors: {
+      black: '#1f1f1f', red: '#e53935', orange: '#fb8c00', yellow: '#fdd835', green: '#43a047',
+      blue: '#1e88e5', purple: '#8e24aa', pink: '#f06292', brown: '#6d4c41', white: '#ffffff',
+    },
+  },
+  {
+    id: 'vibrant',
+    label: 'Vibrant colors',
+    tone: { s: 100, l: 50 },
+    preview: ['pink', 'green', 'purple', 'yellow'],
+    colors: {
+      black: '#000000', red: '#ff1744', orange: '#ff6d00', yellow: '#ffea00', green: '#00e676',
+      blue: '#2979ff', purple: '#d500f9', pink: '#ff4081', brown: '#a0522d', white: '#ffffff',
+    },
+  },
+  {
+    id: 'pastel',
+    label: 'Pastel colors',
+    tone: { s: 80, l: 80 },
+    preview: ['pink', 'yellow', 'blue', 'green'],
+    colors: {
+      black: '#5b5670', red: '#ff9aa2', orange: '#ffc49b', yellow: '#fff1a8', green: '#b5ead7',
+      blue: '#a7c7e7', purple: '#c9b6e4', pink: '#f8c8dc', brown: '#c8a993', white: '#ffffff',
+    },
+  },
+];
+
+export const paletteById = (id) => PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+
+// A color slot's value in a palette: a hex color, or 'rainbow' / 'random'.
+export function colorValue(id, paletteId) {
+  if (id === 'rainbow' || id === 'random') return id;
+  return paletteById(paletteId).colors[id];
+}
+
+export function rainbowHsl(hue, tone = PALETTES[0].tone) {
+  return `hsl(${Math.round(hue) % 360} ${tone.s}% ${tone.l}%)`;
+}
+
 // Colors the Surprise color picks from (white wouldn't show on the paper).
-const SURPRISE_COLORS = COLORS.filter((c) => !c.special && c.id !== 'white');
+const surpriseColors = (paletteId) =>
+  COLORS.filter((c) => !c.special && c.id !== 'white').map((c) => colorValue(c.id, paletteId));
 
 // CSS background showing a palette color: solid, a smooth rainbow, or the Surprise
 // color's slices of the palette.
-export function colorCss(id) {
-  const color = COLORS.find((c) => c.id === id);
+export function colorCss(id, paletteId) {
   if (id === 'rainbow') {
-    return 'conic-gradient(#f44336, #ff9800, #ffeb3b, #4caf50, #2196f3, #9c27b0, #f44336)';
+    const { tone } = paletteById(paletteId);
+    const hues = [0, 36, 60, 120, 210, 280, 360].map((h) => rainbowHsl(h, tone));
+    return `conic-gradient(${hues.join(', ')})`;
   }
   if (id === 'random') {
-    const step = 360 / SURPRISE_COLORS.length;
-    const slices = SURPRISE_COLORS.map((c, i) => `${c.value} ${i * step}deg ${(i + 1) * step}deg`);
+    const colors = surpriseColors(paletteId);
+    const step = 360 / colors.length;
+    const slices = colors.map((c, i) => `${c} ${i * step}deg ${(i + 1) * step}deg`);
     return `conic-gradient(${slices.join(', ')})`;
   }
-  return color.value;
+  return colorValue(id, paletteId);
 }
 
 // A palette color for one stroke of the Surprise color, never the same twice in a row.
-export function surpriseColor(previous) {
-  const choices = SURPRISE_COLORS.filter((c) => c.value !== previous);
-  return choices[Math.floor(Math.random() * choices.length)].value;
+export function surpriseColor(previous, paletteId) {
+  const choices = surpriseColors(paletteId).filter((c) => c !== previous);
+  return choices[Math.floor(Math.random() * choices.length)];
 }
 
 // Brush sizes in canvas pixels (the canvas is 2048×1536).

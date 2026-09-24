@@ -1,7 +1,7 @@
 // Wires the document, input, view model and views together.
 
 import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
-import { COLORS, loadConfig, loadServerConfig } from './config.js';
+import { colorValue, loadConfig, loadServerConfig } from './config.js';
 import { icon, inkDefs } from './icons.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
@@ -19,7 +19,7 @@ setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
-new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);
+new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
 
@@ -68,7 +68,7 @@ document.body.insertAdjacentHTML('afterbegin', inkDefs());
 
 // The drawing tools' tips show the chosen colour.
 function syncInk() {
-  const value = COLORS.find((c) => c.id === vm.color)?.value;
+  const value = colorValue(vm.color, vm.palette);
   const ink = value === 'rainbow' ? 'url(#dk-ink-rainbow)' : value === 'random' ? 'url(#dk-ink-surprise)' : value;
   document.body.style.setProperty('--ink', ink ?? '#EE5A45');
 }

@@ -75,7 +75,7 @@ export class SettingsView {
           'checkbox',
           'colors',
           c.id,
-          `<span class="swatch-preview" style="background:${colorCss(c.id)}"></span>${c.label}`,
+          `<span class="swatch-preview" data-color="${c.id}" style="background:${colorCss(c.id, vm.palette)}"></span>${c.label}`,
           (on) => vm.setColorVisible(c.id, on),
         ),
       ),
@@ -97,6 +97,9 @@ export class SettingsView {
   }
 
   #sync() {
+    for (const el of this.dialog.querySelectorAll('.swatch-preview[data-color]')) {
+      el.style.background = colorCss(el.dataset.color, this.vm.palette);
+    }
     const { config } = this.vm;
     const inputs = (name) => [...this.dialog.querySelectorAll(`input[name="${name}"]`)];
 

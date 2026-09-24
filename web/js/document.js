@@ -1,8 +1,9 @@
 // The drawing document: an operation log with undo/redo, rendered onto two layers
 // (background image + drawing). Ops are small vector records, so undo is exact:
-//   { type: 'stroke', tool, color, size, points, hue? }   color 'rainbow' starts at `hue`
+//   { type: 'stroke', tool, color, size, points, hue?, tone? }   color 'rainbow' starts at `hue`
 //   { type: 'strokes', strokes }      several fingers drawing at once, undone together
-//   { type: 'fill', x, y, color }    color 'rainbow' fills with a rainbow across the page
+//   { type: 'fill', x, y, color, tone? }    color 'rainbow' fills with a rainbow across the page;
+//                                    `tone` is the palette's rainbow saturation/lightness
 //   { type: 'background', imageId }
 //   { type: 'clear', all }            all=true also removes the background
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.
@@ -194,7 +195,7 @@ export class DrawingDocument extends EventTarget {
         for (const stroke of op.strokes) drawStroke(ctx, stroke);
         return true;
       case 'fill':
-        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color);
+        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone);
       case 'background':
         state.background = op.imageId;
         return true;

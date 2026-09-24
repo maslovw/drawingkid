@@ -30,8 +30,11 @@ export function canvasToBlob(canvas, type = 'image/png', quality) {
 // Rainbow strokes run through the hues at this many degrees per canvas pixel drawn.
 const RAINBOW_DEGREES_PER_PX = 0.35;
 
-export function rainbowCss(hue) {
-  return `hsl(${Math.round(hue) % 360} 85% 52%)`;
+// `tone` ({ s, l } in %) is the palette's rainbow; strokes saved before palettes had none.
+const DEFAULT_TONE = { s: 85, l: 52 };
+
+export function rainbowCss(hue, tone = DEFAULT_TONE) {
+  return `hsl(${Math.round(hue) % 360} ${tone.s}% ${tone.l}%)`;
 }
 
 // Draws a whole stroke as one path, so translucent tools don't darken where segments overlap.
@@ -94,7 +97,7 @@ function drawRainbowStroke(ctx, stroke) {
   target.lineWidth = stroke.size * style.width;
   let hue = stroke.hue ?? 0;
   const dot = (x, y) => {
-    target.fillStyle = rainbowCss(hue);
+    target.fillStyle = rainbowCss(hue, stroke.tone);
     target.beginPath();
     target.arc(x, y, target.lineWidth / 2, 0, Math.PI * 2);
     target.fill();
@@ -106,11 +109,11 @@ function drawRainbowStroke(ctx, stroke) {
     const piece = (draw, ex, ey, length) => {
       // Blend from this piece's hue to the next one's along the piece.
       if (length < 0.5) {
-        target.strokeStyle = rainbowCss(hue);
+        target.strokeStyle = rainbowCss(hue, stroke.tone);
       } else {
         const gradient = target.createLinearGradient(sx, sy, ex, ey);
-        gradient.addColorStop(0, rainbowCss(hue));
-        gradient.addColorStop(1, rainbowCss(hue + length * RAINBOW_DEGREES_PER_PX));
+        gradient.addColorStop(0, rainbowCss(hue, stroke.tone));
+        gradient.addColorStop(1, rainbowCss(hue + length * RAINBOW_DEGREES_PER_PX, stroke.tone));
         target.strokeStyle = gradient;
       }
       target.beginPath();
@@ -176,7 +179,7 @@ function hexToRgb(hex) {
 // (drawing composited over the background), so coloring-page outlines in an uploaded image
 // contain the fill even though the fill itself only touches the drawing layer.
 // Returns false when nothing changed.
-export function floodFill(ctx, background, x, y, color, tolerance = 64) {
+export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tolerance = 64) {
   const { width: w, height: h } = ctx.canvas;
   x = Math.floor(x);
   y = Math.floor(y);
@@ -201,7 +204,7 @@ export function floodFill(ctx, background, x, y, color, tolerance = 64) {
   const sr = comp[start], sg = comp[start + 1], sb = comp[start + 2];
   // A rainbow fill runs through the hues from the left edge of the page to the right.
   const rainbow = color === 'rainbow';
-  const columns = rainbow ? Array.from({ length: w }, (_, cx) => hslToRgb((cx / w) * 360, 0.85, 0.52)) : null;
+  const columns = rainbow ? Array.from({ length: w }, (_, cx) => hslToRgb((cx / w) * 360, tone.s / 100, tone.l / 100)) : null;
   const [fr, fg, fb] = rainbow ? columns[x] : hexToRgb(color);
   const startOffset = (y * w + x) * 4;
   if (!rainbow && sr === fr && sg === fg && sb === fb && d[startOffset + 3] === 255) return false;

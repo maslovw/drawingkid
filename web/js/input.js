@@ -44,13 +44,18 @@ export class CanvasInput {
     const brush = this.getBrush();
     const [x, y] = this.#toCanvas(e);
     if (brush.tool === 'fill') {
-      this.doc.commit({ type: 'fill', x: Math.round(x), y: Math.round(y), color: brush.color });
+      const fill = { type: 'fill', x: Math.round(x), y: Math.round(y), color: brush.color };
+      if (brush.color === 'rainbow') fill.tone = brush.tone;
+      this.doc.commit(fill);
       return;
     }
     this.surface.setPointerCapture(e.pointerId);
     const stroke = { type: 'stroke', tool: brush.tool, color: brush.color, size: brush.size, points: [x, y] };
     // Each rainbow stroke starts at its own hue, so fingers drawing together differ.
-    if (brush.color === 'rainbow') stroke.hue = Math.floor(Math.random() * 360);
+    if (brush.color === 'rainbow') {
+      stroke.hue = Math.floor(Math.random() * 360);
+      stroke.tone = brush.tone;
+    }
     this.active.set(e.pointerId, { pointerType: e.pointerType, stroke });
     this.strokes.push(stroke);
     this.#scheduleDraw();

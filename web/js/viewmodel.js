@@ -1,6 +1,8 @@
 // UI state: selected tool/color/size and the AppConfig. Views listen for 'change'.
 
-import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig, surpriseColor } from './config.js';
+import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig, surpriseColor, colorValue, paletteById } from './config.js';
+
+const PALETTE_KEY = 'drawingkid.palette';
 
 export class AppViewModel extends EventTarget {
   // `managed` holds settings fixed by the server's config.local.json.
@@ -12,6 +14,7 @@ export class AppViewModel extends EventTarget {
     this.lastDrawingTool = this.tool;
     this.color = config.visibleColors[0];
     this.size = config.defaultSize;
+    this.palette = paletteById(readPalette()).id;
   }
 
   // True when config.local.json sets this (for imageModels: this provider's model).
@@ -23,9 +26,14 @@ export class AppViewModel extends EventTarget {
   // The brush for a new stroke or fill. The Surprise color picks a new palette color
   // each time; the Rainbow color stays 'rainbow' and is drawn as a changing hue.
   nextBrush() {
-    let color = COLORS.find((c) => c.id === this.color).value;
-    if (color === 'random') color = this.lastSurprise = surpriseColor(this.lastSurprise);
-    return { tool: this.tool, color, size: SIZES.find((s) => s.id === this.size).px };
+    let color = colorValue(this.color, this.palette);
+    if (color === 'random') color = this.lastSurprise = surpriseColor(this.lastSurprise, this.palette);
+    return {
+      tool: this.tool,
+      color,
+      size: SIZES.find((s) => s.id === this.size).px,
+      tone: paletteById(this.palette).tone,
+    };
   }
 
   setTool(id) {
@@ -39,6 +47,17 @@ export class AppViewModel extends EventTarget {
     this.color = id;
     if (this.tool === 'eraser' && this.config.visibleTools.includes(this.lastDrawingTool)) {
       this.tool = this.lastDrawingTool;
+    }
+    this.#changed();
+  }
+
+  // Switching palettes keeps the selected slot (red stays red, just a different red).
+  setPalette(id) {
+    this.palette = paletteById(id).id;
+    try {
+      localStorage.setItem(PALETTE_KEY, this.palette);
+    } catch {
+      // Not remembered, but still switched.
     }
     this.#changed();
   }
@@ -102,4 +121,12 @@ export class AppViewModel extends EventTarget {
 
 function toggled(all, current, id, visible) {
   return all.map((x) => x.id).filter((x) => (x === id ? visible : current.includes(x)));
+}
+
+function readPalette() {
+  try {
+    return localStorage.getItem(PALETTE_KEY);
+  } catch {
+    return null;
+  }
 }

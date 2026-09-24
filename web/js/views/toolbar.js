@@ -1,11 +1,11 @@
 // Bottom toolbar: tools, brush sizes and the color palette, filtered by AppConfig.
 
-import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
+import { TOOLS, COLORS, SIZES, PALETTES, colorCss } from '../config.js';
 import { icon } from '../icons.js';
 
 export class ToolbarView {
-  constructor({ tools, sizes, colors }, vm) {
-    this.els = { tools, sizes, colors };
+  constructor({ tools, sizes, palettes, colors }, vm) {
+    this.els = { tools, sizes, palettes, colors };
     this.vm = vm;
     vm.addEventListener('change', () => this.render());
     this.render();
@@ -14,7 +14,7 @@ export class ToolbarView {
   render() {
     const { vm } = this;
     const { visibleTools, visibleColors } = vm.config;
-    const brushColor = colorCss(vm.color);
+    const brushColor = colorCss(vm.color, vm.palette);
 
     this.els.tools.replaceChildren(
       ...TOOLS.filter((t) => visibleTools.includes(t.id)).map((t) =>
@@ -43,6 +43,21 @@ export class ToolbarView {
       }),
     );
 
+    // Palette picker: each button shows four of its colors, so it reads without words.
+    this.els.palettes.replaceChildren(
+      ...PALETTES.map((p) =>
+        button({
+          className: 'palette',
+          pressed: vm.palette === p.id,
+          label: p.label,
+          html: p.preview
+            .map((id) => `<span class="palette-dot" style="background:${p.colors[id]}"></span>`)
+            .join(''),
+          onClick: () => vm.setPalette(p.id),
+        }),
+      ),
+    );
+
     this.els.colors.replaceChildren(
       ...COLORS.filter((c) => visibleColors.includes(c.id)).map((c) => {
         const b = button({
@@ -51,7 +66,7 @@ export class ToolbarView {
           label: c.label,
           onClick: () => vm.setColor(c.id),
         });
-        b.style.setProperty('--swatch', colorCss(c.id));
+        b.style.setProperty('--swatch', colorCss(c.id, vm.palette));
         return b;
       }),
     );

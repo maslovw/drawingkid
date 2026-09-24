@@ -23,6 +23,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Feature | How it works |
 |---|---|
 | Tools | Pen, pencil, marker (translucent), fill bucket, eraser. Works with Apple Pencil, touch and mouse. |
+| Multi-touch | Several fingers draw at once, each with the current tool and color. Lines drawn together undo together. While Apple Pencil is down, touches are ignored so a resting palm doesn't draw. |
 | Palette | 10 colors, 3 brush sizes. Picking a color while erasing switches back to the last drawing tool. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |

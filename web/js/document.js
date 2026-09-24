@@ -1,6 +1,7 @@
 // The drawing document: an operation log with undo/redo, rendered onto two layers
 // (background image + drawing). Ops are small vector records, so undo is exact:
 //   { type: 'stroke', tool, color, size, points }
+//   { type: 'strokes', strokes }      several fingers drawing at once, undone together
 //   { type: 'fill', x, y, color }
 //   { type: 'background', imageId }
 //   { type: 'clear', all }            all=true also removes the background
@@ -188,6 +189,9 @@ export class DrawingDocument extends EventTarget {
     switch (op.type) {
       case 'stroke':
         drawStroke(ctx, op);
+        return true;
+      case 'strokes':
+        for (const stroke of op.strokes) drawStroke(ctx, stroke);
         return true;
       case 'fill':
         return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color);

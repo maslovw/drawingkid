@@ -1,4 +1,6 @@
 // Turns pointer input (Apple Pencil, finger, mouse) into document ops, with a live preview.
+// Several fingers can draw at once, each with its own stroke in the current tool and color.
+// Strokes drawn together are committed as one op, so a single Undo removes them all.
 
 import { drawStroke } from './render.js';
 
@@ -10,7 +12,8 @@ export class CanvasInput {
     this.liveCtx = liveCanvas.getContext('2d');
     this.doc = doc;
     this.getBrush = getBrush;
-    this.active = null; // { pointerId, stroke }
+    this.active = new Map(); // pointerId -> { pointerType, stroke }, fingers still down
+    this.strokes = []; // every stroke of the current gesture, in the order they started
     this.frame = 0;
 
     surface.addEventListener('pointerdown', (e) => this.#down(e));
@@ -28,10 +31,16 @@ export class CanvasInput {
     ];
   }
 
+  get #penDown() {
+    return [...this.active.values()].some((a) => a.pointerType === 'pen');
+  }
+
   #down(e) {
-    // One stroke at a time; ignore extra fingers/palm and non-primary mouse buttons.
-    if (this.active || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // Palm rejection: while Apple Pencil draws, touches are the resting hand.
+    if (e.pointerType === 'touch' && this.#penDown) return;
     e.preventDefault();
+    if (e.pointerType === 'pen') this.#dropTouches();
     const brush = this.getBrush();
     const [x, y] = this.#toCanvas(e);
     if (brush.tool === 'fill') {
@@ -39,16 +48,16 @@ export class CanvasInput {
       return;
     }
     this.surface.setPointerCapture(e.pointerId);
-    this.active = {
-      pointerId: e.pointerId,
-      stroke: { type: 'stroke', tool: brush.tool, color: brush.color, size: brush.size, points: [x, y] },
-    };
+    const stroke = { type: 'stroke', tool: brush.tool, color: brush.color, size: brush.size, points: [x, y] };
+    this.active.set(e.pointerId, { pointerType: e.pointerType, stroke });
+    this.strokes.push(stroke);
     this.#scheduleDraw();
   }
 
   #move(e) {
-    if (e.pointerId !== this.active?.pointerId) return;
-    const pts = this.active.stroke.points;
+    const active = this.active.get(e.pointerId);
+    if (!active) return;
+    const pts = active.stroke.points;
     // Coalesced events give the full Apple Pencil sample rate where supported.
     const events = e.getCoalescedEvents?.() ?? [];
     for (const ev of events.length ? events : [e]) {
@@ -61,39 +70,52 @@ export class CanvasInput {
   }
 
   #up(e) {
-    if (e.pointerId !== this.active?.pointerId) return;
-    const { stroke } = this.#finish();
-    this.doc.commit(stroke);
+    if (!this.active.delete(e.pointerId)) return;
+    if (this.active.size) return; // other fingers are still drawing
+    this.#commit();
   }
 
   #cancel(e) {
-    if (e.pointerId !== this.active?.pointerId) return;
-    const { stroke } = this.#finish();
-    // The eraser previews directly on the drawing layer, so restore it.
-    if (stroke.tool === 'eraser') this.doc.renderAll();
+    const active = this.active.get(e.pointerId);
+    if (active) this.#drop([[e.pointerId, active]]);
   }
 
-  #finish() {
+  // A touch that was down when Apple Pencil arrived was the palm, not a finger drawing.
+  #dropTouches() {
+    this.#drop([...this.active].filter(([, a]) => a.pointerType === 'touch'));
+  }
+
+  #drop(entries) {
+    if (!entries.length) return;
+    for (const [id, { stroke }] of entries) {
+      this.active.delete(id);
+      this.strokes.splice(this.strokes.indexOf(stroke), 1);
+    }
+    // The eraser previews directly on the drawing layer, so restore it; strokes still
+    // going are redrawn on the next frame.
+    if (entries.some(([, a]) => a.stroke.tool === 'eraser')) this.doc.renderAll();
+    if (this.active.size) this.#scheduleDraw();
+    else this.#commit();
+  }
+
+  // Ends the gesture: everything drawn in it becomes one undo step.
+  #commit() {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
-    const active = this.active;
-    this.active = null;
+    const strokes = this.strokes;
+    this.strokes = [];
     this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
-    return active;
+    if (strokes.length) this.doc.commit(strokes.length === 1 ? strokes[0] : { type: 'strokes', strokes });
   }
 
   #scheduleDraw() {
     if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
-      if (!this.active) return;
-      const { stroke } = this.active;
-      if (stroke.tool === 'eraser') {
+      this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
+      for (const stroke of this.strokes) {
         // Erasing is idempotent, so redrawing the whole path each frame is safe.
-        drawStroke(this.doc.drawCtx, stroke);
-      } else {
-        this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
-        drawStroke(this.liveCtx, stroke);
+        drawStroke(stroke.tool === 'eraser' ? this.doc.drawCtx : this.liveCtx, stroke);
       }
     });
   }

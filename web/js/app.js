@@ -23,7 +23,12 @@ new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
-const voice = new VoiceInput({ input: $('create-idea'), mic: $('create-mic'), keyboard: $('create-keyboard') });
+const voice = new VoiceInput({
+  input: $('create-idea'),
+  mic: $('create-mic'),
+  keyboard: $('create-keyboard'),
+  hint: $('create-voice-hint'),
+});
 
 // --- Page shape ----------------------------------------------------------
 // The paper fills the space between the toolbars. A new page takes the shape of that

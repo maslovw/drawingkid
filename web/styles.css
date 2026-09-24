@@ -774,3 +774,9 @@ dialog::backdrop {
   border-radius: 50%;
   box-shadow: inset 0 0 0 1.5px rgb(46 42 38 / 0.35);
 }
+
+.voice-hint {
+  max-width: 44ch;
+  margin-inline: auto;
+  text-align: left;
+}

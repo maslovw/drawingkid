@@ -34,6 +34,25 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
 
+## HTTPS on the home network (needed for voice)
+
+Safari only allows the microphone, and the share sheet, on `https://` pages (or `localhost`). Over plain `http://192.168.x.x` the Create dialog explains that voice is off, and kids can still type. Clearing Safari's website data doesn't change this. To get voice on the iPad, serve the app over HTTPS with a certificate the iPad trusts:
+
+1. On the Mac: `brew install mkcert`, then `mkcert -install`.
+2. In the `web/` folder, make a certificate for the Mac's address: `mkcert 192.168.1.122`. This creates `192.168.1.122.pem` and `192.168.1.122-key.pem`; `*.pem` files are ignored by git.
+3. Start the server: `python3 serve_https.py 192.168.1.122.pem 192.168.1.122-key.pem`. It listens on port 8443.
+4. Make the iPad trust the certificate:
+   - Find the file with `open "$(mkcert -CAROOT)"` and AirDrop `rootCA.pem` to the iPad.
+   - On the iPad, go to Settings → Profile Downloaded → Install.
+   - Then turn it on under Settings → General → About → Certificate Trust Settings.
+5. On the iPad, open `https://192.168.1.122:8443` and add it to the Home Screen again.
+
+`https://…:8443` is a different site to the browser than `http://…:8000`. Drawings and settings saved on the old address don't carry over. `config.local.json` works the same on both.
+
+If the address is https and voice still doesn't start, the Create dialog says why:
+- **Microphone blocked:** in Safari, tap aA → Website Settings → Microphone → Allow.
+- **Dictation turned off:** Settings → General → Keyboard → Dictation.
+
 ## Button glyphs
 
 Every button uses one sticker-style SVG glyph (`js/icons.js`) made for 3–4-year-olds who can't read yet:
@@ -83,7 +102,7 @@ The **Create** button turns one sentence into a coloring page. It works with eit
 
 Model names change often, so Settings has a **Refresh** button next to the model list. It asks the provider which image models your key can use (`GET /v1/models` for OpenAI, `models.list` for Gemini), fills the dropdown newest first and opens it. The list is remembered in this browser. Before the first refresh, the dropdown offers built-in suggestions: `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1` for OpenAI, and `gemini-3.1-flash-image`, `gemini-3.1-flash-image-preview`, `gemini-2.5-flash-image` for Gemini. OpenAI shuts down `gpt-image-1.5` and `gpt-image-1-mini` on December 1, 2026. If the provider rejects a model, the app shows the provider's error message.
 
-Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the device's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
+Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the device's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`, see *HTTPS on the home network*) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
 
 The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The canvas is cleared and the page becomes the background layer. One undo brings back the previous drawing.
 
@@ -95,6 +114,7 @@ The browser calls the provider's API directly with the key. The key comes from `
 web/
 ├── index.html            markup, dialogs
 ├── config.local.example.json  template for shared settings and API keys
+├── serve_https.py        HTTPS server for the home network (voice needs https)
 ├── styles.css
 └── js/
     ├── app.js            wiring: buttons, autosave, page shape, shortcuts

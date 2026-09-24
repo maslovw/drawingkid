@@ -18,6 +18,7 @@
       <nav class="actions" aria-label="Actions">
         <button id="undo" class="action" type="button" title="Undo"><span aria-hidden="true">↩️</span><span class="caption">Undo</span></button>
         <button id="redo" class="action" type="button" title="Redo"><span aria-hidden="true">↪️</span><span class="caption">Redo</span></button>
+        <button id="create" class="action magic" type="button" title="Make a coloring page"><span aria-hidden="true">🖍️</span><span class="caption">Create</span></button>
         <button id="import" class="action" type="button" title="Add a picture"><span aria-hidden="true">🖼️</span><span class="caption">Picture</span></button>
         <button id="analyze" class="action magic" type="button" title="What did I draw?"><span aria-hidden="true">🪄</span><span class="caption">Magic</span></button>
         <button id="export" class="action" type="button" title="Save or share"><span aria-hidden="true">💾</span><span class="caption">Save</span></button>
@@ -72,6 +73,26 @@
             It's downloaded (a few MB) the first time the button is used; the drawing never leaves the device.
           </p>
         </section>
+        <section>
+          <h3>Coloring page generator</h3>
+          <label class="choice wide">
+            <input id="settings-imagegen" type="checkbox" />
+            <span class="choice-body">Show the “Create” button</span>
+          </label>
+          <div id="settings-provider" class="choice-grid provider-grid"></div>
+          <div class="field-grid">
+            <label for="settings-model">Model</label>
+            <input id="settings-model" type="text" list="settings-model-list" autocomplete="off" spellcheck="false" />
+            <datalist id="settings-model-list"></datalist>
+            <label for="settings-key">API key</label>
+            <input id="settings-key" type="password" autocomplete="off" spellcheck="false" />
+          </div>
+          <p class="hint">
+            Turns one sentence into a black-and-white page to color. Uses your own API key
+            (<a id="settings-key-link" href="#" target="_blank" rel="noopener">get one</a>), which is stored only in this browser
+            and sent only to the provider you pick. Each page costs a few cents on your account.
+          </p>
+        </section>
         <footer class="sheet-footer">
           <button id="settings-reset" type="button" class="danger">Reset to defaults</button>
         </footer>
@@ -98,6 +119,19 @@
         <div class="confirm-actions">
           <button id="save-download" type="button" class="primary">Download</button>
           <button value="close">Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="create-dialog" class="confirm create">
+      <form method="dialog">
+        <p class="confirm-title">What should we color?</p>
+        <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="A dragon having a picnic with a bunny" />
+        <div class="idea-chips" id="create-chips"></div>
+        <p id="create-status" class="hint" role="status"></p>
+        <div class="confirm-actions">
+          <button id="create-go" type="button" class="primary">Make my page</button>
+          <button value="cancel">Cancel</button>
         </div>
       </form>
     </dialog>

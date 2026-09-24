@@ -363,6 +363,7 @@ dialog::backdrop {
 }
 
 .choice input {
+  flex: none;
   width: 22px;
   height: 22px;
   accent-color: var(--accent);
@@ -493,4 +494,74 @@ dialog::backdrop {
   flex-direction: row;
   justify-content: center;
   margin-top: 0;
+}
+
+/* ---- Coloring page generator ---- */
+
+.provider-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  margin-top: 8px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.field-grid label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.field-grid input,
+.create input[type='text'] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e8e2d8;
+  border-radius: 12px;
+  font: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.field-grid input:focus,
+.create input[type='text']:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.create {
+  width: min(560px, 94vw);
+}
+
+.create input[type='text'] {
+  margin-top: 14px;
+  font-size: 1.15rem;
+}
+
+.idea-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.idea-chips button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: #f2efe9;
+  font-size: 0.9rem;
+}
+
+#create-status:empty {
+  display: none;
+}
+
+.create[aria-busy='true'] #create-go {
+  opacity: 0.6;
 }

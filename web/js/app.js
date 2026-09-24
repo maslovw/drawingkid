@@ -7,6 +7,7 @@ import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
 import { loadDrawing, saveDrawing } from './storage.js';
 import { detectObjects, emojiFor } from './ai.js';
+import { PROVIDERS, generateColoringPage, loadApiKeys } from './imagegen.js';
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { DetectionOverlay, speak } from './views/detections.js';
@@ -42,6 +43,7 @@ function syncActions() {
   $('undo').disabled = !doc.canUndo;
   $('redo').disabled = !doc.canRedo;
   $('analyze').hidden = !vm.config.enableAI;
+  $('create').hidden = !vm.config.enableImageGen;
 }
 
 doc.addEventListener('change', () => {
@@ -66,6 +68,79 @@ $('file').addEventListener('change', async (e) => {
     toast("Oops, that picture couldn't be opened.");
   }
 });
+
+// --- Coloring page generator --------------------------------------------
+
+const IDEAS = ['A dinosaur eating ice cream', 'A cat astronaut on the moon', 'A castle with a friendly dragon', 'An underwater tea party'];
+let generation = null; // AbortController while a page is being made
+
+$('create-chips').replaceChildren(
+  ...IDEAS.map((idea) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = idea;
+    b.addEventListener('click', () => {
+      $('create-idea').value = idea;
+      $('create-idea').focus();
+    });
+    return b;
+  }),
+);
+
+$('create').addEventListener('click', () => {
+  const { imageProvider } = vm.config;
+  $('create-status').textContent = loadApiKeys()[imageProvider]
+    ? ''
+    : `Ask a grown-up to add an API key for ${PROVIDERS[imageProvider].label} in Settings first.`;
+  $('create-dialog').showModal();
+});
+
+$('create-idea').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('create-go').click();
+  }
+});
+
+$('create-go').addEventListener('click', async () => {
+  const idea = $('create-idea').value.trim();
+  if (!idea) {
+    $('create-idea').focus();
+    return;
+  }
+  if (generation) return;
+  const dialog = $('create-dialog');
+  const { imageProvider: provider, imageModels } = vm.config;
+  generation = new AbortController();
+  dialog.setAttribute('aria-busy', 'true');
+  $('create-go').disabled = true;
+  $('create-status').textContent = 'Drawing your page… this takes about 10–30 seconds.';
+  try {
+    const blob = await generateColoringPage({
+      provider,
+      model: imageModels[provider],
+      apiKey: loadApiKeys()[provider],
+      idea,
+      signal: generation.signal,
+    });
+    await doc.importBackground(blob, { lineArt: true });
+    dialog.close();
+    $('create-idea').value = '';
+    vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
+    toast('Your coloring page is ready! 🖍️');
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error(error);
+      $('create-status').textContent = error.message || 'Something went wrong. Please try again.';
+    }
+  } finally {
+    generation = null;
+    dialog.removeAttribute('aria-busy');
+    $('create-go').disabled = false;
+  }
+});
+
+$('create-dialog').addEventListener('close', () => generation?.abort());
 
 $('clear').addEventListener('click', () => {
   const dialog = $('clear-dialog');

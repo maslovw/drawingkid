@@ -57,6 +57,18 @@ export class AppViewModel extends EventTarget {
     this.#updateConfig({ enableAI: enabled });
   }
 
+  setImageGenEnabled(enabled) {
+    this.#updateConfig({ enableImageGen: enabled });
+  }
+
+  setImageProvider(provider) {
+    this.#updateConfig({ imageProvider: provider });
+  }
+
+  setImageModel(provider, model) {
+    this.#updateConfig({ imageModels: { ...this.config.imageModels, [provider]: model } });
+  }
+
   resetConfig() {
     this.size = DEFAULT_CONFIG.defaultSize;
     this.#updateConfig(DEFAULT_CONFIG);

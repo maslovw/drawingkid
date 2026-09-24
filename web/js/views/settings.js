@@ -1,6 +1,7 @@
 // Settings dialog: choose which tools and colors appear on the main screen.
 
 import { TOOLS, COLORS, SIZES } from '../config.js';
+import { PROVIDERS, loadApiKeys, saveApiKey } from '../imagegen.js';
 
 export class SettingsView {
   constructor(dialog, vm) {
@@ -42,6 +43,13 @@ export class SettingsView {
       ...SIZES.map((s) => choice('radio', 'size', s.id, s.label, () => vm.setDefaultSize(s.id))),
     );
     q('#settings-ai').addEventListener('change', (e) => vm.setAIEnabled(e.target.checked));
+
+    q('#settings-imagegen').addEventListener('change', (e) => vm.setImageGenEnabled(e.target.checked));
+    q('#settings-provider').replaceChildren(
+      ...Object.entries(PROVIDERS).map(([id, p]) => choice('radio', 'provider', id, p.label, () => vm.setImageProvider(id))),
+    );
+    q('#settings-model').addEventListener('change', (e) => vm.setImageModel(vm.config.imageProvider, e.target.value));
+    q('#settings-key').addEventListener('change', (e) => saveApiKey(vm.config.imageProvider, e.target.value.trim()));
     q('#settings-reset').addEventListener('click', () => vm.resetConfig());
   }
 
@@ -61,6 +69,16 @@ export class SettingsView {
     }
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
     this.dialog.querySelector('#settings-ai').checked = config.enableAI;
+
+    const q = (sel) => this.dialog.querySelector(sel);
+    const provider = PROVIDERS[config.imageProvider];
+    q('#settings-imagegen').checked = config.enableImageGen;
+    for (const input of inputs('provider')) input.checked = input.value === config.imageProvider;
+    q('#settings-model').value = config.imageModels[config.imageProvider];
+    q('#settings-model-list').replaceChildren(...provider.models.map((m) => new Option(m, m)));
+    q('#settings-key').value = loadApiKeys()[config.imageProvider] ?? '';
+    q('#settings-key').placeholder = provider.keyHint;
+    q('#settings-key-link').href = provider.keyUrl;
   }
 }
 

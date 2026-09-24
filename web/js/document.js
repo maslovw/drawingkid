@@ -6,7 +6,7 @@
 //   { type: 'clear', all }            all=true also removes the background
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.
 
-import { WIDTH, HEIGHT, createCanvas, canvasToBlob, drawStroke, floodFill } from './render.js';
+import { WIDTH, HEIGHT, createCanvas, canvasToBlob, drawStroke, floodFill, toLineArt } from './render.js';
 
 const MAX_UNDO = 50;
 
@@ -61,21 +61,23 @@ export class DrawingDocument extends EventTarget {
     this.#changed();
   }
 
-  // Scales an uploaded image to fit the page (on white) and makes it the background.
-  async importBackground(file) {
+  // Scales an image to fit the page (on white) and makes it the background.
+  // `lineArt` cleans it up into crisp black-and-white for coloring.
+  async importBackground(file, { lineArt = false } = {}) {
     const url = URL.createObjectURL(file);
     try {
       const img = new Image();
       img.src = url;
       await img.decode();
       const canvas = createCanvas();
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: lineArt });
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
       const scale = Math.min(WIDTH / img.naturalWidth, HEIGHT / img.naturalHeight);
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
       ctx.drawImage(img, (WIDTH - w) / 2, (HEIGHT - h) / 2, w, h);
+      if (lineArt) toLineArt(ctx);
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
       const imageId = crypto.randomUUID();
       this.images.set(imageId, { blob, bitmap: canvas });

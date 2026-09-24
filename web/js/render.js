@@ -138,3 +138,18 @@ export function floodFill(ctx, background, x, y, color, tolerance = 64) {
   ctx.putImageData(image, 0, 0);
   return true;
 }
+
+// Cleans generated line art: near-white becomes pure white and near-black pure black, so
+// the fill bucket sees crisp regions. Mid-tones (anti-aliased edges) are kept as gray.
+export function toLineArt(ctx) {
+  const { width: w, height: h } = ctx.canvas;
+  const image = ctx.getImageData(0, 0, w, h);
+  const d = image.data;
+  for (let o = 0; o < d.length; o += 4) {
+    const lum = 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2];
+    const v = lum >= 200 ? 255 : lum <= 100 ? 0 : lum;
+    d[o] = d[o + 1] = d[o + 2] = v;
+    d[o + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0);
+}

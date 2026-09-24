@@ -27,6 +27,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
 | Settings | Choose which tools and colors appear, the starting brush size, and whether the magic wand is shown. Saved in `localStorage`. |
+| Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
 | Magic wand | Detects objects and shows tappable boxes. Tapping one says what it is aloud and plays an emoji burst. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
@@ -38,6 +39,21 @@ Apple's Vision and Core ML aren't available in browsers, so the web version uses
 To serve the weights yourself (for example on a host that can't reach Google Storage), download the `ssdlite_mobilenet_v2` model files and set `window.DRAWINGKID_MODEL_URL` to their `model.json` before `js/app.js` loads.
 
 **Limitation:** COCO-SSD was trained on photos of 80 everyday object classes. It reliably finds dogs, cats, people and cars in uploaded photos. It usually does **not** recognize children's line drawings, and in that case the app says "I'm not sure what that is". Doodle recognition would need a sketch-trained model, e.g. one trained on Google's Quick, Draw! dataset. It would plug into `detectObjects()` in `js/ai.js`.
+
+## Coloring page generator
+
+The **Create** button turns one sentence into a coloring page. It works with either provider; pick one in Settings and paste an API key:
+
+| Provider | Default model | Get a key |
+|---|---|---|
+| OpenAI (GPT Image) | `gpt-image-1` | https://platform.openai.com/api-keys (image models may require organization verification) |
+| Google Gemini ("Nano Banana") | `gemini-3.1-flash-image` | https://aistudio.google.com/apikey |
+
+Model names change often, so the model is an editable field in Settings (with suggestions such as `gpt-image-1.5`, `gpt-image-2`, `gemini-2.5-flash-image`). If the provider rejects a model, the app shows the provider's error message.
+
+The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The page becomes the background layer, and undo removes it.
+
+The browser calls the provider's API directly with the key, which is stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
 
 ## Code layout
 
@@ -54,6 +70,7 @@ web/
     ├── input.js          pointer events → strokes/fills, live preview
     ├── storage.js        IndexedDB autosave
     ├── ai.js             TensorFlow.js COCO-SSD loader + labels
+    ├── imagegen.js       coloring pages via OpenAI / Gemini
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog

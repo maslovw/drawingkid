@@ -1,5 +1,7 @@
 // Tools, colors, sizes and the persisted AppConfig (which of them are visible).
 
+import { PROVIDERS } from './imagegen.js';
+
 export const TOOLS = [
   { id: 'pen', label: 'Pen', icon: '🖊️' },
   { id: 'pencil', label: 'Pencil', icon: '✏️' },
@@ -33,6 +35,9 @@ export const DEFAULT_CONFIG = Object.freeze({
   visibleColors: COLORS.map((c) => c.id),
   defaultSize: 'medium',
   enableAI: true,
+  enableImageGen: true,
+  imageProvider: 'openai',
+  imageModels: { openai: PROVIDERS.openai.defaultModel, gemini: PROVIDERS.gemini.defaultModel },
 });
 
 const STORAGE_KEY = 'drawingkid.config';
@@ -66,5 +71,10 @@ export function normalizeConfig(config) {
     visibleColors: pick(COLORS, config.visibleColors, DEFAULT_CONFIG.visibleColors),
     defaultSize: SIZES.some((s) => s.id === config.defaultSize) ? config.defaultSize : DEFAULT_CONFIG.defaultSize,
     enableAI: config.enableAI !== false,
+    enableImageGen: config.enableImageGen !== false,
+    imageProvider: config.imageProvider in PROVIDERS ? config.imageProvider : DEFAULT_CONFIG.imageProvider,
+    imageModels: Object.fromEntries(
+      Object.keys(PROVIDERS).map((p) => [p, config.imageModels?.[p]?.trim() || DEFAULT_CONFIG.imageModels[p]]),
+    ),
   };
 }

@@ -17,7 +17,7 @@ const server = await loadServerConfig();
 setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
-new CanvasInput($('paper'), $('live'), doc, () => vm.brush);
+new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));

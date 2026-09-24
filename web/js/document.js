@@ -1,8 +1,8 @@
 // The drawing document: an operation log with undo/redo, rendered onto two layers
 // (background image + drawing). Ops are small vector records, so undo is exact:
-//   { type: 'stroke', tool, color, size, points }
+//   { type: 'stroke', tool, color, size, points, hue? }   color 'rainbow' starts at `hue`
 //   { type: 'strokes', strokes }      several fingers drawing at once, undone together
-//   { type: 'fill', x, y, color }
+//   { type: 'fill', x, y, color }    color 'rainbow' fills with a rainbow across the page
 //   { type: 'background', imageId }
 //   { type: 'clear', all }            all=true also removes the background
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.

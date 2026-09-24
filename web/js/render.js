@@ -27,9 +27,20 @@ export function canvasToBlob(canvas, type = 'image/png', quality) {
   );
 }
 
+// Rainbow strokes run through the hues at this many degrees per canvas pixel drawn.
+const RAINBOW_DEGREES_PER_PX = 0.35;
+
+export function rainbowCss(hue) {
+  return `hsl(${Math.round(hue) % 360} 85% 52%)`;
+}
+
 // Draws a whole stroke as one path, so translucent tools don't darken where segments overlap.
 // `points` is a flat [x0, y0, x1, y1, ...] array.
 export function drawStroke(ctx, stroke) {
+  if (stroke.color === 'rainbow' && stroke.tool !== 'eraser') {
+    drawRainbowStroke(ctx, stroke);
+    return;
+  }
   const style = TOOL_STYLES[stroke.tool];
   const pts = stroke.points;
   ctx.save();
@@ -59,6 +70,101 @@ export function drawStroke(ctx, stroke) {
     ctx.stroke();
   }
   ctx.restore();
+}
+
+// Each smoothed piece of the path gets its own hue. The curve's direction is continuous where
+// pieces meet, so they get flat ends there and only the stroke's two ends are rounded.
+// Translucent tools are drawn opaque on a scratch canvas and then blended in once.
+let scratch = null;
+function drawRainbowStroke(ctx, stroke) {
+  const style = TOOL_STYLES[stroke.tool];
+  const pts = stroke.points;
+  const { width, height } = ctx.canvas;
+  let target = ctx;
+  let box = null;
+  if (style.alpha < 1) {
+    if (!scratch || scratch.width !== width || scratch.height !== height) scratch = createCanvas(width, height);
+    target = scratch.getContext('2d');
+    box = strokeBounds(pts, stroke.size * style.width, width, height);
+    target.clearRect(box.x, box.y, box.w, box.h);
+  }
+  target.save();
+  target.lineCap = 'butt';
+  target.lineJoin = 'round';
+  target.lineWidth = stroke.size * style.width;
+  let hue = stroke.hue ?? 0;
+  const dot = (x, y) => {
+    target.fillStyle = rainbowCss(hue);
+    target.beginPath();
+    target.arc(x, y, target.lineWidth / 2, 0, Math.PI * 2);
+    target.fill();
+  };
+  dot(pts[0], pts[1]);
+  if (pts.length > 2) {
+    // Same curve as drawStroke: through segment midpoints, then a line to the last point.
+    let [sx, sy] = [pts[0], pts[1]];
+    const piece = (draw, ex, ey, length) => {
+      // Blend from this piece's hue to the next one's along the piece.
+      if (length < 0.5) {
+        target.strokeStyle = rainbowCss(hue);
+      } else {
+        const gradient = target.createLinearGradient(sx, sy, ex, ey);
+        gradient.addColorStop(0, rainbowCss(hue));
+        gradient.addColorStop(1, rainbowCss(hue + length * RAINBOW_DEGREES_PER_PX));
+        target.strokeStyle = gradient;
+      }
+      target.beginPath();
+      target.moveTo(sx, sy);
+      draw();
+      target.stroke();
+      hue += length * RAINBOW_DEGREES_PER_PX;
+      [sx, sy] = [ex, ey];
+    };
+    for (let i = 2; i < pts.length - 2; i += 2) {
+      const mx = (pts[i] + pts[i + 2]) / 2;
+      const my = (pts[i + 1] + pts[i + 3]) / 2;
+      const length = Math.hypot(pts[i] - sx, pts[i + 1] - sy) + Math.hypot(mx - pts[i], my - pts[i + 1]);
+      piece(() => target.quadraticCurveTo(pts[i], pts[i + 1], mx, my), mx, my, length);
+    }
+    const [ex, ey] = [pts[pts.length - 2], pts[pts.length - 1]];
+    const length = Math.hypot(ex - sx, ey - sy);
+    piece(() => target.lineTo(ex, ey), ex, ey, length);
+    dot(ex, ey);
+  }
+  target.restore();
+  if (target !== ctx) {
+    ctx.save();
+    ctx.globalAlpha = style.alpha;
+    ctx.drawImage(scratch, box.x, box.y, box.w, box.h, box.x, box.y, box.w, box.h);
+    ctx.restore();
+  }
+}
+
+// The stroke's bounding box, padded by its width and clamped to the canvas.
+function strokeBounds(pts, lineWidth, width, height) {
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pts.length; i += 2) {
+    x0 = Math.min(x0, pts[i]);
+    x1 = Math.max(x1, pts[i]);
+    y0 = Math.min(y0, pts[i + 1]);
+    y1 = Math.max(y1, pts[i + 1]);
+  }
+  const pad = lineWidth / 2 + 2;
+  const x = Math.max(0, Math.floor(x0 - pad));
+  const y = Math.max(0, Math.floor(y0 - pad));
+  return {
+    x,
+    y,
+    w: Math.max(1, Math.min(width, Math.ceil(x1 + pad)) - x),
+    h: Math.max(1, Math.min(height, Math.ceil(y1 + pad)) - y),
+  };
+}
+
+function hslToRgb(h, s, l) {
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return [f(0), f(8), f(4)].map((v) => Math.round(v * 255));
 }
 
 function hexToRgb(hex) {
@@ -93,9 +199,12 @@ export function floodFill(ctx, background, x, y, color, tolerance = 64) {
 
   const start = (y * w + x) * 3;
   const sr = comp[start], sg = comp[start + 1], sb = comp[start + 2];
-  const [fr, fg, fb] = hexToRgb(color);
+  // A rainbow fill runs through the hues from the left edge of the page to the right.
+  const rainbow = color === 'rainbow';
+  const columns = rainbow ? Array.from({ length: w }, (_, cx) => hslToRgb((cx / w) * 360, 0.85, 0.52)) : null;
+  const [fr, fg, fb] = rainbow ? columns[x] : hexToRgb(color);
   const startOffset = (y * w + x) * 4;
-  if (sr === fr && sg === fg && sb === fb && d[startOffset + 3] === 255) return false;
+  if (!rainbow && sr === fr && sg === fg && sb === fb && d[startOffset + 3] === 255) return false;
 
   const matches = (i) => {
     const c = i * 3;
@@ -120,9 +229,16 @@ export function floodFill(ctx, background, x, y, color, tolerance = 64) {
     for (; i < rowStart + w && !visited[i] && matches(i); i++) {
       visited[i] = 1;
       const o = i * 4;
-      d[o] = fr;
-      d[o + 1] = fg;
-      d[o + 2] = fb;
+      if (rainbow) {
+        const c = columns[i - rowStart];
+        d[o] = c[0];
+        d[o + 1] = c[1];
+        d[o + 2] = c[2];
+      } else {
+        d[o] = fr;
+        d[o + 1] = fg;
+        d[o + 2] = fb;
+      }
       d[o + 3] = 255;
       if (row > 0) {
         const up = i - w;

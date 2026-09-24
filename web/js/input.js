@@ -49,6 +49,8 @@ export class CanvasInput {
     }
     this.surface.setPointerCapture(e.pointerId);
     const stroke = { type: 'stroke', tool: brush.tool, color: brush.color, size: brush.size, points: [x, y] };
+    // Each rainbow stroke starts at its own hue, so fingers drawing together differ.
+    if (brush.color === 'rainbow') stroke.hue = Math.floor(Math.random() * 360);
     this.active.set(e.pointerId, { pointerType: e.pointerType, stroke });
     this.strokes.push(stroke);
     this.#scheduleDraw();

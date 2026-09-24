@@ -24,7 +24,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 |---|---|
 | Tools | Pen, pencil, marker (translucent), fill bucket, eraser. Works with Apple Pencil, touch and mouse. |
 | Multi-touch | Several fingers draw at once, each with the current tool and color. Lines drawn together undo together. While Apple Pencil is down, touches are ignored so a resting palm doesn't draw. |
-| Palette | 10 colors, 3 brush sizes. Picking a color while erasing switches back to the last drawing tool. |
+| Palette | 10 colors plus two special ones, and 3 brush sizes. **Rainbow** 🌈 changes color smoothly along the line; with the fill bucket it fills an area with a rainbow. **Surprise color** picks a random palette color for every line, tap and finger (never white, never the same twice in a row). Picking a color while erasing switches back to the last drawing tool. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
 | Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |

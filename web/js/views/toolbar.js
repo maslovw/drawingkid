@@ -1,6 +1,6 @@
 // Bottom toolbar: tools, brush sizes and the color palette, filtered by AppConfig.
 
-import { TOOLS, COLORS, SIZES } from '../config.js';
+import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
 
 export class ToolbarView {
   constructor({ tools, sizes, colors }, vm) {
@@ -13,7 +13,7 @@ export class ToolbarView {
   render() {
     const { vm } = this;
     const { visibleTools, visibleColors } = vm.config;
-    const brushColor = vm.brush.color;
+    const brushColor = colorCss(vm.color);
 
     this.els.tools.replaceChildren(
       ...TOOLS.filter((t) => visibleTools.includes(t.id)).map((t) =>
@@ -50,7 +50,7 @@ export class ToolbarView {
           label: c.label,
           onClick: () => vm.setColor(c.id),
         });
-        b.style.setProperty('--swatch', c.value);
+        b.style.setProperty('--swatch', colorCss(c.id));
         return b;
       }),
     );

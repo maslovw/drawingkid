@@ -1,6 +1,6 @@
 // UI state: selected tool/color/size and the AppConfig. Views listen for 'change'.
 
-import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig } from './config.js';
+import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig, surpriseColor } from './config.js';
 
 export class AppViewModel extends EventTarget {
   // `managed` holds settings fixed by the server's config.local.json.
@@ -20,12 +20,12 @@ export class AppViewModel extends EventTarget {
     return key === 'imageModels' ? provider in (this.managed.imageModels ?? {}) : true;
   }
 
-  get brush() {
-    return {
-      tool: this.tool,
-      color: COLORS.find((c) => c.id === this.color).value,
-      size: SIZES.find((s) => s.id === this.size).px,
-    };
+  // The brush for a new stroke or fill. The Surprise color picks a new palette color
+  // each time; the Rainbow color stays 'rainbow' and is drawn as a changing hue.
+  nextBrush() {
+    let color = COLORS.find((c) => c.id === this.color).value;
+    if (color === 'random') color = this.lastSurprise = surpriseColor(this.lastSurprise);
+    return { tool: this.tool, color, size: SIZES.find((s) => s.id === this.size).px };
   }
 
   setTool(id) {

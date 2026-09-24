@@ -1,6 +1,6 @@
 // Settings dialog: choose which tools and colors appear on the main screen.
 
-import { TOOLS, COLORS, SIZES } from '../config.js';
+import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
 import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels, isManagedKey } from '../imagegen.js';
 
 export class SettingsView {
@@ -74,7 +74,7 @@ export class SettingsView {
           'checkbox',
           'colors',
           c.id,
-          `<span class="swatch-preview" style="background:${c.value}"></span>${c.label}`,
+          `<span class="swatch-preview" style="background:${colorCss(c.id)}"></span>${c.label}`,
           (on) => vm.setColorVisible(c.id, on),
         ),
       ),

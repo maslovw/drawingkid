@@ -21,7 +21,34 @@ export const COLORS = [
   { id: 'pink', label: 'Pink', value: '#f06292' },
   { id: 'brown', label: 'Brown', value: '#6d4c41' },
   { id: 'white', label: 'White', value: '#ffffff' },
+  // Special colors: `value` is resolved per stroke rather than being a fixed color.
+  { id: 'rainbow', label: 'Rainbow', value: 'rainbow', special: true },
+  { id: 'random', label: 'Surprise color', value: 'random', special: true },
 ];
+
+// Colors the Surprise color picks from (white wouldn't show on the paper).
+const SURPRISE_COLORS = COLORS.filter((c) => !c.special && c.id !== 'white');
+
+// CSS background showing a palette color: solid, a smooth rainbow, or the Surprise
+// color's slices of the palette.
+export function colorCss(id) {
+  const color = COLORS.find((c) => c.id === id);
+  if (id === 'rainbow') {
+    return 'conic-gradient(#f44336, #ff9800, #ffeb3b, #4caf50, #2196f3, #9c27b0, #f44336)';
+  }
+  if (id === 'random') {
+    const step = 360 / SURPRISE_COLORS.length;
+    const slices = SURPRISE_COLORS.map((c, i) => `${c.value} ${i * step}deg ${(i + 1) * step}deg`);
+    return `conic-gradient(${slices.join(', ')})`;
+  }
+  return color.value;
+}
+
+// A palette color for one stroke of the Surprise color, never the same twice in a row.
+export function surpriseColor(previous) {
+  const choices = SURPRISE_COLORS.filter((c) => c.value !== previous);
+  return choices[Math.floor(Math.random() * choices.length)].value;
+}
 
 // Brush sizes in canvas pixels (the canvas is 2048×1536).
 export const SIZES = [
@@ -80,12 +107,28 @@ export function loadConfig(managed = {}) {
   } catch {
     // Corrupt or unavailable storage: fall back to defaults.
   }
+  // Tools and colors added since the settings were saved start out visible.
+  for (const [key, all, known] of [
+    ['visibleTools', TOOLS, saved.knownTools],
+    ['visibleColors', COLORS, saved.knownColors],
+  ]) {
+    if (!Array.isArray(saved[key])) continue;
+    const added = all.map((x) => x.id).filter((id) => !(known ?? DEFAULT_KNOWN[key]).includes(id));
+    saved[key] = [...saved[key], ...added];
+  }
   return applyManaged({ ...DEFAULT_CONFIG, ...saved }, managed);
 }
 
+// What existed before saved settings recorded the tools and colors they knew about.
+const DEFAULT_KNOWN = {
+  visibleTools: ['pen', 'pencil', 'marker', 'fill', 'eraser'],
+  visibleColors: ['black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'brown', 'white'],
+};
+
 export function saveConfig(config) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    const known = { knownTools: TOOLS.map((t) => t.id), knownColors: COLORS.map((c) => c.id) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, ...known }));
   } catch {
     // Private mode / quota: settings just won't persist.
   }

@@ -68,7 +68,7 @@ new ResizeObserver(() => {
 for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = icon(el.dataset.icon);
 document.body.insertAdjacentHTML('afterbegin', inkDefs());
 
-// The drawing tools' tips show the chosen colour.
+// The drawing tools' tips show the chosen colour. Only glyph parts use --ink; text uses --text.
 function syncInk() {
   const value = colorValue(vm.color, vm.palette);
   const ink = value === 'rainbow' ? 'url(#dk-ink-rainbow)' : value === 'random' ? 'url(#dk-ink-surprise)' : value;

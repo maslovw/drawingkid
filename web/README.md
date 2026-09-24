@@ -85,7 +85,7 @@ Model names change often, so Settings has a **Refresh** button next to the model
 
 Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the device's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
 
-The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The page becomes the background layer, and undo removes it.
+The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The canvas is cleared and the page becomes the background layer. One undo brings back the previous drawing.
 
 The browser calls the provider's API directly with the key. The key comes from `config.local.json` (see above) or is typed in Settings and stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
 

@@ -184,7 +184,7 @@ $('create-go').addEventListener('click', async () => {
       aspect: doc.width / doc.height,
       signal: generation.signal,
     });
-    await doc.importBackground(blob, { lineArt: true });
+    await doc.importBackground(blob, { lineArt: true, clear: true });
     dialog.close();
     $('create-idea').value = '';
     vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);

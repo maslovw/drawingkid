@@ -4,7 +4,7 @@
 //   { type: 'strokes', strokes }      several fingers drawing at once, undone together
 //   { type: 'fill', x, y, color, tone? }    color 'rainbow' fills with a rainbow across the page;
 //                                    `tone` is the palette's rainbow saturation/lightness
-//   { type: 'background', imageId }
+//   { type: 'background', imageId, clear? }  clear=true also wipes the drawing (a fresh page)
 //   { type: 'clear', all }            all=true also removes the background
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.
 // Each page has its own size, chosen to fit the screen when the page is started.
@@ -77,8 +77,9 @@ export class DrawingDocument extends EventTarget {
   }
 
   // Scales an image to fit the page (on white) and makes it the background.
-  // `lineArt` cleans it up into crisp black-and-white for coloring.
-  async importBackground(file, { lineArt = false } = {}) {
+  // `lineArt` cleans it up into crisp black-and-white for coloring; `clear` starts a fresh
+  // page (in the same undo step, so one undo brings the old drawing back).
+  async importBackground(file, { lineArt = false, clear = false } = {}) {
     const { width: W, height: H } = this;
     const url = URL.createObjectURL(file);
     try {
@@ -97,7 +98,7 @@ export class DrawingDocument extends EventTarget {
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
       const imageId = newId();
       this.images.set(imageId, { blob, bitmap: canvas });
-      this.commit({ type: 'background', imageId });
+      this.commit(clear ? { type: 'background', imageId, clear } : { type: 'background', imageId });
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -197,6 +198,7 @@ export class DrawingDocument extends EventTarget {
       case 'fill':
         return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone);
       case 'background':
+        if (op.clear) ctx.clearRect(0, 0, this.width, this.height);
         state.background = op.imageId;
         return true;
       case 'clear':

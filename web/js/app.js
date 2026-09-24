@@ -11,6 +11,7 @@ import { PROVIDERS, generateColoringPage, loadApiKeys, setManagedApiKeys } from 
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { ParentGate } from './views/parentgate.js';
+import { VoiceInput } from './views/voiceinput.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,6 +23,7 @@ new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
+const voice = new VoiceInput({ input: $('create-idea'), mic: $('create-mic'), keyboard: $('create-keyboard') });
 
 // --- Page shape ----------------------------------------------------------
 // The paper fills the space between the toolbars. A new page takes the shape of that
@@ -136,8 +138,8 @@ $('create-chips').replaceChildren(
     b.type = 'button';
     b.textContent = idea;
     b.addEventListener('click', () => {
+      voice.stop();
       $('create-idea').value = idea;
-      $('create-idea').focus();
     });
     return b;
   }),
@@ -149,6 +151,7 @@ $('create').addEventListener('click', () => {
     ? ''
     : `Ask a grown-up to add an API key for ${PROVIDERS[imageProvider].label} in Settings first.`;
   $('create-dialog').showModal();
+  voice.start(); // listen straight away; the keyboard button is there for typing
 });
 
 $('create-idea').addEventListener('keydown', (e) => {
@@ -159,9 +162,10 @@ $('create-idea').addEventListener('keydown', (e) => {
 });
 
 $('create-go').addEventListener('click', async () => {
+  voice.stop();
   const idea = $('create-idea').value.trim();
   if (!idea) {
-    $('create-idea').focus();
+    voice.available ? voice.start() : $('create-idea').focus();
     return;
   }
   if (generation) return;
@@ -197,7 +201,10 @@ $('create-go').addEventListener('click', async () => {
   }
 });
 
-$('create-dialog').addEventListener('close', () => generation?.abort());
+$('create-dialog').addEventListener('close', () => {
+  voice.stop();
+  generation?.abort();
+});
 
 $('clear').addEventListener('click', () => {
   const dialog = $('clear-dialog');

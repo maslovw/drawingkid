@@ -546,9 +546,59 @@ dialog::backdrop {
   width: min(560px, 94vw);
 }
 
-.create input[type='text'] {
+.idea-row {
+  display: flex;
+  gap: 8px;
   margin-top: 14px;
+}
+
+.create input[type='text'] {
+  flex: 1;
+  min-width: 0;
   font-size: 1.15rem;
+}
+
+.voice-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  border: 2px solid #e8e2d8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0;
+}
+
+.voice-btn[hidden] {
+  display: none;
+}
+
+.voice-btn .icon .glyph {
+  width: 34px;
+  height: 34px;
+}
+
+.voice-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.voice-btn.listening {
+  border-color: #ee5a45;
+  background: #fdecea;
+  animation: listening 1.2s ease-in-out infinite;
+}
+
+@keyframes listening {
+  50% {
+    box-shadow: 0 0 0 6px rgb(238 90 69 / 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-btn.listening {
+    animation: none;
+  }
 }
 
 .idea-chips {

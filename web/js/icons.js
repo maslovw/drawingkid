@@ -73,6 +73,17 @@ const GLYPHS = {
   <rect x="9" y="11" width="30" height="5.5" rx="2.5" fill="#4CB872"/>
   <path d="M20.5 21.5 L21 38.5 M27.5 21.5 L27 38.5" stroke-width="2"/>`,
 
+  mic: `<path d="M12 22 Q12 34 24 34 Q36 34 36 22" stroke-width="3"/>
+  <path d="M24 34 L24 41 M17 42 L31 42" stroke-width="3"/>
+  <rect x="17" y="4" width="14" height="23" rx="7" fill="#EE5A45"/>
+  <path d="M20.5 11 L20.5 17" stroke="#FFFFFF" stroke-width="2.5"/>`,
+
+  keyboard: `<rect x="4" y="12" width="40" height="25" rx="4" fill="#FFFFFF"/>
+  ${[7.5, 14.5, 21.5, 28.5, 35.5]
+    .flatMap((x) => [17, 23.5].map((y) => `<rect x="${x}" y="${y}" width="5" height="4" rx="1" fill="#AAB7C4" stroke-width="1.5"/>`))
+    .join('')}
+  <rect x="14" y="30" width="20" height="3.5" rx="1" fill="#4A9BE8" stroke-width="1.5"/>`,
+
   settings: `${[0, 45, 90, 135, 180, 225, 270, 315]
     .map((a) => `<rect x="21" y="4.5" width="6" height="9" rx="1.5" fill="#AAB7C4" transform="rotate(${a} 24 24)"/>`)
     .join('')}

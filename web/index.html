@@ -150,7 +150,11 @@
     <dialog id="create-dialog" class="confirm create">
       <form method="dialog">
         <p class="confirm-title">What should we color?</p>
-        <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="A dragon having a picnic with a bunny" />
+        <div class="idea-row">
+          <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="A dragon having a picnic with a bunny" />
+          <button id="create-mic" class="voice-btn" type="button" title="Say it" aria-label="Say it" autofocus hidden><span class="icon" aria-hidden="true" data-icon="mic"></span></button>
+          <button id="create-keyboard" class="voice-btn" type="button" title="Type it" aria-label="Type it" hidden><span class="icon" aria-hidden="true" data-icon="keyboard"></span></button>
+        </div>
         <div class="idea-chips" id="create-chips"></div>
         <p id="create-status" class="hint" role="status"></p>
         <div class="confirm-actions">

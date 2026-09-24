@@ -61,11 +61,12 @@ new ResizeObserver(() => {
   refitTimer = setTimeout(refitBlankPage, 250);
 }).observe($('stage'));
 
-function syncHandedness() {
+function syncLayout() {
   document.body.dataset.hand = vm.config.leftHanded ? 'left' : 'right';
+  document.body.dataset.labels = vm.config.showLabels ? 'on' : 'off';
 }
-vm.addEventListener('change', syncHandedness);
-syncHandedness();
+vm.addEventListener('change', syncLayout);
+syncLayout();
 
 // --- Toast ---------------------------------------------------------------
 

@@ -83,6 +83,7 @@ export class SettingsView {
       ...SIZES.map((s) => choice('radio', 'size', s.id, s.label, () => vm.setDefaultSize(s.id))),
     );
     q('#settings-lefty').addEventListener('change', (e) => vm.setLeftHanded(e.target.checked));
+    q('#settings-labels').addEventListener('change', (e) => vm.setShowLabels(e.target.checked));
 
     q('#settings-imagegen').addEventListener('change', (e) => vm.setImageGenEnabled(e.target.checked));
     q('#settings-provider').replaceChildren(
@@ -109,10 +110,11 @@ export class SettingsView {
       }
     }
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
-    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-lefty, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
+    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-lefty, #settings-labels, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
       el.disabled = false;
     }
     this.dialog.querySelector('#settings-lefty').checked = config.leftHanded;
+    this.dialog.querySelector('#settings-labels').checked = config.showLabels;
 
     const q = (sel) => this.dialog.querySelector(sel);
     const provider = PROVIDERS[config.imageProvider];
@@ -141,6 +143,7 @@ export class SettingsView {
     lock(inputs('colors'), vm.isManaged('visibleColors'));
     lock(inputs('size'), vm.isManaged('defaultSize'));
     lock([q('#settings-lefty')], vm.isManaged('leftHanded'));
+    lock([q('#settings-labels')], vm.isManaged('showLabels'));
     lock([q('#settings-imagegen')], vm.isManaged('enableImageGen'));
     lock(inputs('provider'), vm.isManaged('imageProvider'));
     const modelManaged = vm.isManaged('imageModels', provider);

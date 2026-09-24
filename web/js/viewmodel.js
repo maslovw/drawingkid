@@ -65,6 +65,10 @@ export class AppViewModel extends EventTarget {
     this.#updateConfig({ leftHanded });
   }
 
+  setShowLabels(showLabels) {
+    this.#updateConfig({ showLabels });
+  }
+
   setImageGenEnabled(enabled) {
     this.#updateConfig({ enableImageGen: enabled });
   }

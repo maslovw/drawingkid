@@ -26,7 +26,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Palette | 10 colors, 3 brush sizes. Picking a color while erasing switches back to the last drawing tool. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
-| Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
+| Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
@@ -47,7 +47,7 @@ To set things up once for every device, copy `config.local.example.json` to `con
 Every device that opens the app from this server loads the file at startup:
 
 - **API keys** in the file are used on every device and can't be viewed or changed in Settings.
-- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `leftHanded`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
+- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `leftHanded`, `showLabels`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
 - Changes take effect the next time the app is opened or reloaded.
 
 `config.local.json` is in `.gitignore`, so keys don't end up in the repository. The server hands the file to anyone who can reach it, so anyone on your home network could read the keys. Serve the app only on your home network, and use keys with a spending limit.

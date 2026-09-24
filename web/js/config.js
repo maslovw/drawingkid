@@ -3,11 +3,11 @@
 import { PROVIDERS } from './imagegen.js';
 
 export const TOOLS = [
-  { id: 'pen', label: 'Pen', icon: '🖊️' },
-  { id: 'pencil', label: 'Pencil', icon: '✏️' },
-  { id: 'marker', label: 'Marker', icon: '🖍️' },
-  { id: 'fill', label: 'Fill', icon: '🪣' },
-  { id: 'eraser', label: 'Eraser', icon: '🧽' },
+  { id: 'pen', label: 'Pen' },
+  { id: 'pencil', label: 'Pencil' },
+  { id: 'marker', label: 'Marker' },
+  { id: 'fill', label: 'Fill' },
+  { id: 'eraser', label: 'Eraser' },
 ];
 
 export const COLORS = [

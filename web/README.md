@@ -33,6 +33,15 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
 
+## Button glyphs
+
+Every button uses one sticker-style SVG glyph (`js/icons.js`) made for 3–4-year-olds who can't read yet:
+- **Real objects:** each glyph is something they already know, such as a felt pen, a yellow pencil, a fat marker, a paint bucket, the red-and-blue school eraser, a magic wand, a photo, a drawing with a heart, a bin, and a gear for grown-ups.
+- **One look:** flat colours from one palette and a single warm-black outline.
+- **Tip shows the colour:** the drawing tools lean the same way, and their tip, cap and paint show the chosen colour (Rainbow and Surprise included).
+
+The design is on the "Drawing Kid Icons" canvas: https://claude.ai/artifact/MfMgibuFqkwuee9m5nwByW
+
 ## Shared settings: `config.local.json`
 
 To set things up once for every device, copy `config.local.example.json` to `config.local.json` in the same folder as `index.html` and fill it in:
@@ -93,6 +102,7 @@ web/
     ├── input.js          pointer events → strokes/fills, live preview
     ├── storage.js        IndexedDB autosave
     ├── imagegen.js       coloring pages via OpenAI / Gemini
+    ├── icons.js          button glyphs (SVG) in one sticker style
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog

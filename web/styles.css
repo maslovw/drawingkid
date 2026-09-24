@@ -228,7 +228,7 @@ body[data-labels='off'] .tool .icon {
 }
 
 .action.magic {
-  background: linear-gradient(135deg, #fff1b8, #ffd6f0);
+  background: #fff1b8;
 }
 
 .tool {
@@ -655,4 +655,24 @@ dialog::backdrop {
   content: '🔒';
   margin-left: 4px;
   font-size: 0.8em;
+}
+
+/* ---- Glyphs (js/icons.js) ----
+   Sized from the font size each button already sets, so every button size and the
+   picture-only mode keep working. Parts with class "ink" show the chosen colour. */
+
+.icon {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.icon .glyph {
+  width: 1.45em;
+  height: 1.45em;
+  display: block;
+  overflow: visible;
+}
+
+.glyph .ink {
+  fill: var(--ink, #ee5a45);
 }

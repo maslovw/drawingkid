@@ -1,6 +1,7 @@
 // Bottom toolbar: tools, brush sizes and the color palette, filtered by AppConfig.
 
 import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
+import { icon } from '../icons.js';
 
 export class ToolbarView {
   constructor({ tools, sizes, colors }, vm) {
@@ -21,7 +22,7 @@ export class ToolbarView {
           className: 'tool',
           pressed: vm.tool === t.id,
           label: t.label,
-          html: `<span class="icon" aria-hidden="true">${t.icon}</span><span class="caption">${t.label}</span>`,
+          html: `<span class="icon" aria-hidden="true">${icon(t.id)}</span><span class="caption">${t.label}</span>`,
           onClick: () => vm.setTool(t.id),
         }),
       ),

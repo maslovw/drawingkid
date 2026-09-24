@@ -1,7 +1,8 @@
 // Wires the document, input, view model and views together.
 
 import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
-import { loadConfig, loadServerConfig } from './config.js';
+import { COLORS, loadConfig, loadServerConfig } from './config.js';
+import { icon, inkDefs } from './icons.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
@@ -60,6 +61,19 @@ new ResizeObserver(() => {
   clearTimeout(refitTimer);
   refitTimer = setTimeout(refitBlankPage, 250);
 }).observe($('stage'));
+
+// Button glyphs: static buttons get theirs here; tool glyphs come from the toolbar view.
+for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = icon(el.dataset.icon);
+document.body.insertAdjacentHTML('afterbegin', inkDefs());
+
+// The drawing tools' tips show the chosen colour.
+function syncInk() {
+  const value = COLORS.find((c) => c.id === vm.color)?.value;
+  const ink = value === 'rainbow' ? 'url(#dk-ink-rainbow)' : value === 'random' ? 'url(#dk-ink-surprise)' : value;
+  document.body.style.setProperty('--ink', ink ?? '#EE5A45');
+}
+vm.addEventListener('change', syncInk);
+syncInk();
 
 function syncLayout() {
   document.body.dataset.hand = vm.config.leftHanded ? 'left' : 'right';

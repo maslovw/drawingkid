@@ -1,6 +1,7 @@
 // Settings dialog: choose which tools and colors appear on the main screen.
 
 import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
+import { icon } from '../icons.js';
 import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels, isManagedKey } from '../imagegen.js';
 
 export class SettingsView {
@@ -63,7 +64,7 @@ export class SettingsView {
 
     q('#settings-tools').replaceChildren(
       ...TOOLS.map((t) =>
-        choice('checkbox', 'tools', t.id, `<span class="icon" aria-hidden="true">${t.icon}</span>${t.label}`, (on) =>
+        choice('checkbox', 'tools', t.id, `<span class="icon" aria-hidden="true">${icon(t.id)}</span>${t.label}`, (on) =>
           vm.setToolVisible(t.id, on),
         ),
       ),

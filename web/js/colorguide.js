@@ -30,6 +30,8 @@ const LOOSE_DEPTH = 4;
 // SHADED_OFFSET from its color.
 const SHADED_OFFSET = 12;
 const SHADED_SHARE = 0.25;
+// Touching areas whose colors are closer than this blend into one when they meet smoothly.
+const CLOSE_COLORS = 64;
 
 // `image` is { width, height, data } (RGBA). Returns { lineArt, guide, colors }: two RGBA
 // arrays of the same size, and how many palette colors were found. `lineArt` is the page to
@@ -175,9 +177,10 @@ export function splitColoredPage(image) {
     }
   }
 
-  // Two shaded areas that blend smoothly into each other (a gradient the palette cut in two)
-  // are one area, with the color of its larger part. Flat areas never merge: a soft edge
-  // between two flat colors (a pink inner ear on an orange head) is a real border.
+  // Two areas that blend smoothly into each other are one area, with the color of its larger
+  // part, when their colors are close (two near-identical greens on one body) or both are
+  // shaded (a gradient the palette cut in two). A soft edge between two clearly different flat
+  // colors (a pink inner ear on an orange head) stays a border.
   const areaColor = new Int32Array(areas + 1);
   const areaSize = new Float64Array(areas + 1);
   const flatCount = new Float64Array(areas + 1);
@@ -195,6 +198,11 @@ export function splitColoredPage(image) {
     if (dr * dr + dg * dg + db * db > SHADED_OFFSET * SHADED_OFFSET) offCount[a]++;
   }
   const shaded = (a) => flatCount[a] > 0 && offCount[a] / flatCount[a] > SHADED_SHARE;
+  const closeColors = (k, l) => {
+    const [r1, g1, b1] = palette[k];
+    const [r2, g2, b2] = palette[l];
+    return (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2 < CLOSE_COLORS * CLOSE_COLORS;
+  };
   const parent = Int32Array.from({ length: areas + 1 }, (_, k) => k);
   const find = (k) => {
     while (parent[k] !== k) k = parent[k] = parent[parent[k]];
@@ -204,10 +212,10 @@ export function splitColoredPage(image) {
   for (let i = 0; i < n; i++) {
     const a = area[i];
     if (a <= 0) continue;
-    if (!shaded(a)) continue;
     for (let side = 0; side < 2; side++) {
       const j = side ? i + w : i % w < w - 1 ? i + 1 : -1;
-      if (j < 0 || j >= n || area[j] <= 0 || area[j] === a || !similar(i, j) || !shaded(area[j])) continue;
+      if (j < 0 || j >= n || area[j] <= 0 || area[j] === a || !similar(i, j)) continue;
+      if (!closeColors(areaColor[a], areaColor[area[j]]) && !(shaded(a) && shaded(area[j]))) continue;
       const ra = find(a), rb = find(area[j]);
       if (ra === rb) continue;
       // The larger part stays the root, so the group keeps its color.

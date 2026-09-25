@@ -113,10 +113,20 @@ function syncActions() {
 }
 
 doc.addEventListener('change', () => {
+  vm.setHasPicture(doc.hasPicture);
   syncActions();
   scheduleSave();
 });
 vm.addEventListener('change', syncActions);
+
+// Coloring mode needs the picture's areas; find them before the first stroke.
+let prepareTimer;
+function prepareInside() {
+  clearTimeout(prepareTimer);
+  if (vm.inside && doc.hasPicture) prepareTimer = setTimeout(() => doc.prepareInside(), 300);
+}
+doc.addEventListener('change', prepareInside);
+vm.addEventListener('change', prepareInside);
 
 $('undo').addEventListener('click', () => doc.undo());
 $('redo').addEventListener('click', () => doc.redo());

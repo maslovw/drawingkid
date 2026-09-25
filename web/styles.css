@@ -254,6 +254,12 @@ body[data-labels='off'] .tool .icon {
   border-color: var(--accent);
 }
 
+/* The coloring-mode switch is on/off, not a tool choice, so it looks different when on. */
+.tool.mode[aria-pressed='true'] {
+  background: #e3f4e8;
+  border-color: #4cb872;
+}
+
 .size {
   display: grid;
   place-items: center;
@@ -1036,6 +1042,10 @@ dialog::backdrop {
   fill: var(--ink, #ee5a45);
 }
 
+.glyph .ink-line {
+  stroke: var(--ink, #ee5a45);
+}
+
 /* ---- Palette picker ---- */
 
 .palettes {
@@ -1357,8 +1367,12 @@ dialog::backdrop {
     justify-content: space-between;
   }
 
-  .tool {
+  /* Seven buttons with the coloring-mode switch: let them share a narrow screen. */
+  .tool,
+  body[data-labels='off'] .tool {
+    flex: 0 1 54px;
     width: 54px;
+    min-width: 0;
   }
 
   /* Create is the one big action on top: a pill with its word beside the glyph. */

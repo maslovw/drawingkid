@@ -38,8 +38,13 @@ export function rainbowCss(hue, tone = DEFAULT_TONE) {
 }
 
 // Draws a whole stroke as one path, so translucent tools don't darken where segments overlap.
-// `points` is a flat [x0, y0, x1, y1, ...] array.
-export function drawStroke(ctx, stroke) {
+// `points` is a flat [x0, y0, x1, y1, ...] array. With a `region` (see regionMask) the
+// stroke only lands inside that area of the picture, eraser included.
+export function drawStroke(ctx, stroke, region = null) {
+  if (region) {
+    drawClippedStroke(ctx, stroke, region);
+    return;
+  }
   if (stroke.color === 'rainbow' && stroke.tool !== 'eraser') {
     drawRainbowStroke(ctx, stroke);
     return;
@@ -52,7 +57,7 @@ export function drawStroke(ctx, stroke) {
   ctx.lineWidth = stroke.size * style.width;
   ctx.globalAlpha = style.alpha;
   if (stroke.tool === 'eraser') {
-    ctx.globalCompositeOperation = 'destination-out';
+    if (!stroke.asShape) ctx.globalCompositeOperation = 'destination-out';
     ctx.strokeStyle = ctx.fillStyle = '#000';
   } else {
     ctx.strokeStyle = ctx.fillStyle = stroke.color;
@@ -141,6 +146,110 @@ function drawRainbowStroke(ctx, stroke) {
     ctx.drawImage(scratch, box.x, box.y, box.w, box.h, box.x, box.y, box.w, box.h);
     ctx.restore();
   }
+}
+
+// A clipped stroke is drawn on its own scratch canvas, cut to the region's mask there, and
+// then painted (or, for the eraser, erased) onto the target.
+let clipScratch = null;
+function drawClippedStroke(ctx, stroke, region) {
+  const { width, height } = ctx.canvas;
+  const style = TOOL_STYLES[stroke.tool];
+  const s = strokeBounds(stroke.points, stroke.size * style.width, width, height);
+  const r = region.box;
+  const x = Math.max(s.x, r.x);
+  const y = Math.max(s.y, r.y);
+  const w = Math.min(s.x + s.w, r.x + r.w) - x;
+  const h = Math.min(s.y + s.h, r.y + r.h) - y;
+  if (w <= 0 || h <= 0) return;
+  if (!clipScratch || clipScratch.width !== width || clipScratch.height !== height) {
+    clipScratch = createCanvas(width, height);
+  }
+  const sc = clipScratch.getContext('2d');
+  sc.clearRect(x, y, w, h);
+  drawStroke(sc, stroke.tool === 'eraser' ? { ...stroke, asShape: true } : stroke);
+  sc.save();
+  sc.globalCompositeOperation = 'destination-in';
+  sc.drawImage(region.mask, x - r.x, y - r.y, w, h, x, y, w, h);
+  sc.restore();
+  ctx.save();
+  if (stroke.tool === 'eraser') ctx.globalCompositeOperation = 'destination-out';
+  ctx.drawImage(clipScratch, x, y, w, h, x, y, w, h);
+  ctx.restore();
+}
+
+// Splits a picture into its areas: connected pixels that aren't outline ink. Returns
+// { labels, count, width, height }, where labels[i] is the area of pixel i (0 = ink).
+export function labelRegions(background) {
+  const { width: w, height: h, data: bg } = background;
+  const n = w * h;
+  const labels = new Int32Array(n);
+  for (let i = 0, o = 0; i < n; i++, o += 4) {
+    const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
+    labels[i] = lum < INK_LUMINANCE ? 0 : -1; // -1: not labelled yet
+  }
+  let count = 0;
+  const stack = [];
+  for (let seed = 0; seed < n; seed++) {
+    if (labels[seed] !== -1) continue;
+    const label = ++count;
+    stack.push(seed);
+    // Scanline flood fill, as in floodFill.
+    while (stack.length) {
+      let i = stack.pop();
+      if (labels[i] !== -1) continue;
+      const rowStart = i - (i % w);
+      while (i > rowStart && labels[i - 1] === -1) i--;
+      let upOpen = false;
+      let downOpen = false;
+      for (; i < rowStart + w && labels[i] === -1; i++) {
+        labels[i] = label;
+        if (i >= w) {
+          const open = labels[i - w] === -1;
+          if (open && !upOpen) stack.push(i - w);
+          upOpen = open;
+        }
+        if (i < n - w) {
+          const open = labels[i + w] === -1;
+          if (open && !downOpen) stack.push(i + w);
+          downOpen = open;
+        }
+      }
+    }
+  }
+  return { labels, count, width: w, height: h };
+}
+
+// A mask of one area, cropped to its bounding box: { mask: canvas, box }. The soft gray edge
+// of an outline is only partly covered, so paint fades into the line instead of hiding it.
+export function regionMask(regions, background, label) {
+  const { labels, width: w, height: h } = regions;
+  let [x0, y0, x1, y1] = [w, h, -1, -1];
+  for (let i = 0; i < labels.length; i++) {
+    if (labels[i] !== label) continue;
+    const x = i % w;
+    const y = (i - x) / w;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  if (x1 < 0) return null;
+  const box = { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  const mask = createCanvas(box.w, box.h);
+  const mctx = mask.getContext('2d');
+  const image = mctx.createImageData(box.w, box.h);
+  const d = image.data;
+  const bg = background.data;
+  for (let y = 0; y < box.h; y++) {
+    for (let x = 0, i = (y + box.y) * w + box.x, o = y * box.w * 4; x < box.w; x++, i++, o += 4) {
+      if (labels[i] !== label) continue;
+      const b = i * 4;
+      const lum = 0.299 * bg[b] + 0.587 * bg[b + 1] + 0.114 * bg[b + 2];
+      d[o + 3] = Math.min(255, ((lum - INK_LUMINANCE) / (255 - INK_LUMINANCE - 20)) * 255);
+    }
+  }
+  mctx.putImageData(image, 0, 0);
+  return { mask, box };
 }
 
 // The stroke's bounding box, padded by its width and clamped to the canvas.

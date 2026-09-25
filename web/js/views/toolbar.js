@@ -26,6 +26,19 @@ export class ToolbarView {
           onClick: () => vm.setTool(t.id),
         }),
       ),
+      // Coloring mode switch, shown while there's a picture to color (the bucket always
+      // stays inside the lines, so it's hidden for Fill).
+      ...(vm.hasPicture && vm.tool !== 'fill'
+        ? [
+            button({
+              className: 'tool mode',
+              pressed: vm.inside,
+              label: vm.inside ? 'Stay inside the lines' : 'Draw anywhere',
+              html: `<span class="icon" aria-hidden="true">${icon(vm.inside ? 'inside' : 'anywhere')}</span><span class="caption">${vm.inside ? 'Inside' : 'Free'}</span>`,
+              onClick: () => vm.setInside(!vm.inside),
+            }),
+          ]
+        : []),
       // The phone layout's Brush button, which opens sizes and palettes; hidden elsewhere.
       this.els.brush,
     );

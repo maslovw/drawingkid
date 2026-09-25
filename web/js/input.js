@@ -14,6 +14,7 @@ export class CanvasInput {
     this.getBrush = getBrush;
     this.active = new Map(); // pointerId -> { pointerType, stroke }, fingers still down
     this.strokes = []; // every stroke of the current gesture, in the order they started
+    this.unseeded = new Set(); // strokes staying inside the lines that haven't left a line yet
     this.frame = 0;
 
     surface.addEventListener('pointerdown', (e) => this.#down(e));
@@ -56,6 +57,13 @@ export class CanvasInput {
       stroke.hue = Math.floor(Math.random() * 360);
       stroke.tone = brush.tone;
     }
+    // In coloring mode a stroke on a picture stays in the area where it starts. Started on a
+    // line, it waits (drawing nothing) until it reaches an area.
+    if (brush.inside && this.doc.hasPicture) {
+      const seed = this.doc.insideSeed(stroke.points);
+      if (seed) stroke.inside = seed;
+      else this.unseeded.add(stroke);
+    }
     this.active.set(e.pointerId, { pointerType: e.pointerType, stroke });
     this.strokes.push(stroke);
     this.#scheduleDraw();
@@ -72,6 +80,13 @@ export class CanvasInput {
       const lx = pts[pts.length - 2];
       const ly = pts[pts.length - 1];
       if (Math.hypot(x - lx, y - ly) >= MIN_POINT_DISTANCE) pts.push(x, y);
+    }
+    if (this.unseeded.has(active.stroke)) {
+      const seed = this.doc.insideSeed(pts);
+      if (seed) {
+        active.stroke.inside = seed;
+        this.unseeded.delete(active.stroke);
+      }
     }
     this.#scheduleDraw();
   }
@@ -97,6 +112,7 @@ export class CanvasInput {
     for (const [id, { stroke }] of entries) {
       this.active.delete(id);
       this.strokes.splice(this.strokes.indexOf(stroke), 1);
+      this.unseeded.delete(stroke);
     }
     // The eraser previews directly on the drawing layer, so restore it; strokes still
     // going are redrawn on the next frame.
@@ -109,8 +125,9 @@ export class CanvasInput {
   #commit() {
     cancelAnimationFrame(this.frame);
     this.frame = 0;
-    const strokes = this.strokes;
+    const strokes = this.strokes.filter((s) => !this.unseeded.has(s));
     this.strokes = [];
+    this.unseeded.clear();
     this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
     if (strokes.length) this.doc.commit(strokes.length === 1 ? strokes[0] : { type: 'strokes', strokes });
   }
@@ -121,8 +138,11 @@ export class CanvasInput {
       this.frame = 0;
       this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
       for (const stroke of this.strokes) {
+        if (this.unseeded.has(stroke)) continue;
+        const region = stroke.inside ? this.doc.insideRegion(stroke.inside) : null;
+        if (stroke.inside && !region) continue;
         // Erasing is idempotent, so redrawing the whole path each frame is safe.
-        drawStroke(stroke.tool === 'eraser' ? this.doc.drawCtx : this.liveCtx, stroke);
+        drawStroke(stroke.tool === 'eraser' ? this.doc.drawCtx : this.liveCtx, stroke, region);
       }
     });
   }

@@ -780,3 +780,108 @@ dialog::backdrop {
   margin-inline: auto;
   text-align: left;
 }
+
+/* ---- Log panel ---- */
+
+.log-open {
+  margin-top: 12px;
+}
+
+.log-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.log-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f7f4ef;
+}
+
+.log-tile p {
+  margin: 0;
+}
+
+.log-tile-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log-tile-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-tile-value-small {
+  font-size: 1.2rem;
+}
+
+.log-tile .secondary {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.log-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-entry,
+.log-empty {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f7f4ef;
+}
+
+.log-entry p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.log-entry-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.log-entry-cost {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text, #2b2b2b);
+}
+
+.log-entry.failed .log-entry-cost,
+.log-entry-error {
+  color: var(--danger);
+}
+
+.log-entry-text {
+  font-size: 1.05rem;
+}
+
+.log-entry-meta,
+.log-entry-error {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.log-empty {
+  color: var(--muted);
+}

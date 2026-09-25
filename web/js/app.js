@@ -8,6 +8,8 @@ import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
 import { loadDrawing, saveDrawing } from './storage.js';
 import { PROVIDERS, generateColoringPage, loadApiKeys, setManagedApiKeys } from './imagegen.js';
+import { recordRequest, estimateCost } from './usagelog.js';
+import { LogView } from './views/log.js';
 import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { ParentGate } from './views/parentgate.js';
@@ -23,6 +25,8 @@ new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
+const log = new LogView($('log-dialog'));
+$('settings-log').addEventListener('click', () => log.open());
 const voice = new VoiceInput({
   input: $('create-idea'),
   mic: $('create-mic'),
@@ -181,15 +185,30 @@ $('create-go').addEventListener('click', async () => {
   $('create-go').disabled = true;
   $('create-status').textContent = 'Drawing your page… this takes about 10–30 seconds.';
   try {
-    const blob = await generateColoringPage({
+    const model = imageModels[provider];
+    let result;
+    try {
+      result = await generateColoringPage({
+        provider,
+        model,
+        apiKey: loadApiKeys()[provider],
+        idea,
+        aspect: doc.width / doc.height,
+        signal: generation.signal,
+      });
+    } catch (error) {
+      if (error.name !== 'AbortError') recordRequest({ text: idea, provider, model, ok: false, error: error.message });
+      throw error;
+    }
+    recordRequest({
+      text: idea,
       provider,
-      model: imageModels[provider],
-      apiKey: loadApiKeys()[provider],
-      idea,
-      aspect: doc.width / doc.height,
-      signal: generation.signal,
+      model,
+      ok: true,
+      usage: result.usage,
+      costUsd: estimateCost(model, result.usage),
     });
-    await doc.importBackground(blob, { lineArt: true, clear: true });
+    await doc.importBackground(result.blob, { lineArt: true, clear: true });
     dialog.close();
     $('create-idea').value = '';
     vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);

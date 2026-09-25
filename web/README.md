@@ -30,6 +30,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
 | Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
+| Log | In Settings, **Log** shows how many coloring pages were made (in total and this month), what they cost, and every request with the child's words, the model, token counts and any error. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
 | Save / share | Exports a 2048×1536 PNG through the share sheet (iPad) or as a download. |
@@ -108,6 +109,29 @@ The app wraps the sentence in a coloring-page prompt (thick closed outlines, no 
 
 The browser calls the provider's API directly with the key. The key comes from `config.local.json` (see above) or is typed in Settings and stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
 
+## Log: pictures made and money spent
+
+Settings → **Log** opens a panel for grown-ups:
+
+- **Pictures made:** a count of successful coloring pages, in total and this month. Failed requests are listed but not counted.
+- **Estimated cost:** each OpenAI and Gemini answer reports the tokens it used. The app multiplies them by the model's list price (USD per 1M tokens, September 2026):
+
+  | Model | Text in | Image out | About one page |
+  |---|---|---|---|
+  | `gpt-image-2.5-flare` | $5 | $30 | $0.03 at medium quality |
+  | `gpt-image-1` | $5 | $40 | |
+  | `gemini-3.1-flash-image` | $0.50 | $60 | $0.067 at 1K |
+  | `gemini-2.5-flash-image` | $0.30 | $30 | |
+
+  Pictures from other models (for example `gpt-image-2.5-sunburst`) are counted but shown as having no known price. The prices are in `js/usagelog.js`.
+- **OpenAI spend this month:** what OpenAI actually billed, read from its Costs API (`/v1/organization/costs`). This needs an **Admin key** (`sk-admin-…`, from platform.openai.com → Settings → Admin keys). The regular key that makes pictures can't read costs. The figure covers the whole OpenAI organization, not just this app, and OpenAI updates it with up to a day's delay.
+  - **Where the admin key goes:** type it in the Log panel, or put it in `config.local.json` as `"apiKeys": { "openaiAdmin": "sk-admin-…" }`.
+  - **Keep it safe:** an admin key can manage the whole organization, so keep it off shared devices where you can.
+  - **Gemini:** it has no spend API, so Gemini pages are estimates only.
+- **Requests:** the newest 300 requests, each with time, the child's words, provider, model, tokens, cost or error. Totals are kept separately, so they stay correct when old entries drop off.
+
+The log is stored on each device (`localStorage`), so each iPad has its own. **Clear log** asks for a second tap.
+
 ## Code layout
 
 ```
@@ -125,11 +149,13 @@ web/
     ├── input.js          pointer events → strokes/fills, live preview
     ├── storage.js        IndexedDB autosave
     ├── imagegen.js       coloring pages via OpenAI / Gemini
+    ├── usagelog.js       request log, token prices, OpenAI Costs API
     ├── icons.js          button glyphs (SVG) in one sticker style
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog
         ├── parentgate.js grown-ups-only math check
+        ├── log.js        Log panel (pictures, cost, requests)
         └── voiceinput.js speak-your-idea box for Create
 ```
 

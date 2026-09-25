@@ -187,7 +187,22 @@ export async function generateColoringPage({ provider, model, apiKey, idea, aspe
   const b64 = provider === 'openai' ? body?.data?.[0]?.b64_json : geminiImage(body);
   if (!b64) throw new ImageGenError(`${name} didn't return a picture. Try describing it differently.`);
   const mime = provider === 'openai' ? 'image/png' : b64.mimeType;
-  return base64ToBlob(provider === 'openai' ? b64 : b64.data, mime);
+  return { blob: base64ToBlob(provider === 'openai' ? b64 : b64.data, mime), usage: usageOf(provider, body) };
+}
+
+// Token counts the provider reports for the request, normalized to
+// { textIn, imageIn, out }; null if the response has none.
+function usageOf(provider, body) {
+  if (provider === 'openai') {
+    const u = body?.usage;
+    if (!u) return null;
+    const imageIn = u.input_tokens_details?.image_tokens ?? 0;
+    const textIn = u.input_tokens_details?.text_tokens ?? Math.max(0, (u.input_tokens ?? 0) - imageIn);
+    return { textIn, imageIn, out: u.output_tokens ?? 0 };
+  }
+  const u = body?.usageMetadata;
+  if (!u) return null;
+  return { textIn: u.promptTokenCount ?? 0, imageIn: 0, out: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0) };
 }
 
 function geminiImage(body) {

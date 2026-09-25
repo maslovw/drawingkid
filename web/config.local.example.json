@@ -1,7 +1,8 @@
 {
   "apiKeys": {
     "openai": "sk-your-openai-key",
-    "gemini": "AIza-your-gemini-key"
+    "gemini": "AIza-your-gemini-key",
+    "openaiAdmin": "sk-admin-optional-for-the-log-panel"
   },
   "imageProvider": "openai",
   "imageModels": {

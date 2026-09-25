@@ -103,6 +103,7 @@
             (<a id="settings-key-link" href="#" target="_blank" rel="noopener">get one</a>), which is stored only in this browser
             and sent only to the provider you pick. Each page costs a few cents on your account.
           </p>
+          <button id="settings-log" type="button" class="secondary log-open">Log: pictures made, cost and requests</button>
         </section>
         <footer class="sheet-footer">
           <button id="settings-reset" type="button" class="danger">Reset to defaults</button>
@@ -131,6 +132,50 @@
           <button id="save-download" type="button" class="primary">Download</button>
           <button value="close">Close</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog id="log-dialog" class="sheet log">
+      <form method="dialog">
+        <header class="sheet-header">
+          <h2>Log</h2>
+          <button id="log-close" type="button" class="primary">Done</button>
+        </header>
+        <div class="log-tiles">
+          <div class="log-tile">
+            <p class="log-tile-label">Pictures made</p>
+            <p id="log-images" class="log-tile-value">0</p>
+            <p id="log-images-month" class="hint"></p>
+          </div>
+          <div class="log-tile">
+            <p class="log-tile-label">Estimated cost</p>
+            <p id="log-cost" class="log-tile-value">$0.00</p>
+            <p id="log-cost-month" class="hint"></p>
+          </div>
+          <div class="log-tile">
+            <p class="log-tile-label">OpenAI spend this month</p>
+            <p id="log-spend" class="log-tile-value log-tile-value-small">Not checked yet</p>
+            <button id="log-spend-check" type="button" class="secondary">Check with OpenAI</button>
+          </div>
+        </div>
+        <p id="log-spend-note" class="hint" role="status"></p>
+        <p id="log-since" class="hint"></p>
+        <p class="hint">
+          The estimate multiplies the tokens each answer reports by the model’s list price. The OpenAI
+          spend is what OpenAI actually billed your whole organization this month; reading it needs an
+          <strong>Admin key</strong> (sk-admin-…, made at platform.openai.com → Settings → Admin keys),
+          not the key that makes pictures. Gemini has no spend API, so Gemini pages are estimates only.
+        </p>
+        <div class="field-grid">
+          <label for="log-admin-key">Admin key</label>
+          <input id="log-admin-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-admin-…" />
+        </div>
+        <p id="log-admin-managed" class="hint" hidden>🔒 Set by <code>config.local.json</code> (<code>apiKeys.openaiAdmin</code>).</p>
+        <h3>Requests</h3>
+        <ol id="log-entries" class="log-entries"></ol>
+        <footer class="sheet-footer">
+          <button id="log-clear" type="button" class="danger">Clear log</button>
+        </footer>
       </form>
     </dialog>
 

@@ -302,7 +302,7 @@ $('create-go').addEventListener('click', async () => {
       usage: result.usage,
       costUsd: estimateCost(model, result.usage),
     });
-    await doc.importBackground(result.blob, { lineArt: true, clear: true });
+    await doc.importBackground(result.blob, { colored: true, clear: true });
     dialog.close();
     $('create-idea').value = '';
     syncIdeaTiles();

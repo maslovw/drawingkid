@@ -179,46 +179,52 @@ function drawClippedStroke(ctx, stroke, region) {
 
 // Splits a picture into its areas: connected pixels that aren't outline ink. Returns
 // { labels, count, width, height }, where labels[i] is the area of pixel i (0 = ink).
-// Gaps where a line stops short of another are closed by the same invisible walls the fill
-// uses (see lineEndWalls); each wall pixel then joins an area next to it.
-export function labelRegions(background) {
+// With a color guide, the areas are the guide's; without one, gaps where a line stops short
+// of another are closed by the same invisible walls the fill uses (see lineEndWalls). Pixels
+// in neither (walls, blends along an area's edge) then join an area next to them.
+export function labelRegions(background, guide = null) {
   const { width: w, height: h } = background;
   const n = w * h;
-  const { ink, walls } = lineArt(background);
+  const gd = guide?.data;
+  const { ink, walls } = lineArt(background, !gd);
   const labels = new Int32Array(n);
-  for (let i = 0; i < n; i++) labels[i] = ink[i] || walls[i] ? 0 : -1; // -1: not labelled yet
+  const between = (i) => (walls && walls[i]) || (gd && !gd[i * 4 + 3]);
+  for (let i = 0; i < n; i++) labels[i] = ink[i] || between(i) ? 0 : -1; // -1: not labelled yet
   let count = 0;
   const stack = [];
   for (let seed = 0; seed < n; seed++) {
     if (labels[seed] !== -1) continue;
     const label = ++count;
+    const key = gd ? guideKey(gd, seed) : -1;
+    const open = gd ? (j) => labels[j] === -1 && guideKey(gd, j) === key : (j) => labels[j] === -1;
     stack.push(seed);
     // Scanline flood fill, as in floodFill.
     while (stack.length) {
       let i = stack.pop();
       if (labels[i] !== -1) continue;
       const rowStart = i - (i % w);
-      while (i > rowStart && labels[i - 1] === -1) i--;
+      while (i > rowStart && open(i - 1)) i--;
       let upOpen = false;
       let downOpen = false;
-      for (; i < rowStart + w && labels[i] === -1; i++) {
+      for (; i < rowStart + w && open(i); i++) {
         labels[i] = label;
         if (i >= w) {
-          const open = labels[i - w] === -1;
-          if (open && !upOpen) stack.push(i - w);
-          upOpen = open;
+          const next = open(i - w);
+          if (next && !upOpen) stack.push(i - w);
+          upOpen = next;
         }
         if (i < n - w) {
-          const open = labels[i + w] === -1;
-          if (open && !downOpen) stack.push(i + w);
-          downOpen = open;
+          const next = open(i + w);
+          if (next && !downOpen) stack.push(i + w);
+          downOpen = next;
         }
       }
     }
   }
-  // Walls are a few pixels thick: hand them out to their neighbors from the outside in.
+  // Walls and blends are a few pixels thick: hand them out to their neighbors from the
+  // outside in.
   let pending = [];
-  for (let i = 0; i < n; i++) if (walls[i]) pending.push(i);
+  for (let i = 0; i < n; i++) if (!ink[i] && between(i)) pending.push(i);
   while (pending.length) {
     const next = [];
     const found = [];
@@ -315,34 +321,67 @@ const GAP_RADIUS = 1 / 200;
 // extended to it by an invisible wall, the way a child sees the shape as closed.
 const LINE_END_REACH = 1 / 40;
 
-// Per background: which pixels are ink, which are invisible walls closing line ends, how much
-// each pixel darkens, and how far each one is from ink or wall.
+// Per background: which pixels are ink and how much each pixel darkens; with `closing`, also
+// which are invisible walls closing line ends and how far each one is from ink or wall.
 const lineArtCache = new WeakMap();
 
-// Works out a page's lines ahead of its first fill (the result is cached).
-export function prepareFill(background) {
-  if (background) lineArt(background);
+// Works out a page's lines ahead of its first fill (the result is cached). A page with a
+// color guide (see colorguide.js) knows its areas already and needs no gap closing.
+export function prepareFill(background, guide = null) {
+  if (background) lineArt(background, !guide);
 }
 
-function lineArt(background) {
-  let art = lineArtCache.get(background);
-  if (art) return art;
+function lineArt(background, closing = true) {
   const { width: w, height: h, data: bg } = background;
   const n = w * h;
-  const shade = new Float32Array(n);
-  const ink = new Uint8Array(n);
-  for (let i = 0, o = 0; i < n; i++, o += 4) {
-    const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
-    ink[i] = lum < INK_LUMINANCE ? 1 : 0;
-    shade[i] = Math.max(lum, 1) / 255;
+  let art = lineArtCache.get(background);
+  if (!art) {
+    const shade = new Float32Array(n);
+    const ink = new Uint8Array(n);
+    for (let i = 0, o = 0; i < n; i++, o += 4) {
+      const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
+      ink[i] = lum < INK_LUMINANCE ? 1 : 0;
+      shade[i] = Math.max(lum, 1) / 255;
+    }
+    art = { ink, shade };
+    lineArtCache.set(background, art);
   }
-  const walls = lineEndWalls(ink, w, h, Math.round(Math.max(w, h) * LINE_END_REACH));
-  const blocked = new Uint8Array(n);
-  for (let i = 0; i < n; i++) blocked[i] = ink[i] | walls[i];
-  art = { ink, walls, blocked, shade, distance: inkDistance(blocked, w, h) };
-  lineArtCache.set(background, art);
+  if (closing && !art.distance) {
+    const walls = lineEndWalls(art.ink, w, h, Math.round(Math.max(w, h) * LINE_END_REACH));
+    const blocked = new Uint8Array(n);
+    for (let i = 0; i < n; i++) blocked[i] = art.ink[i] | walls[i];
+    Object.assign(art, { walls, blocked, distance: inkDistance(blocked, w, h) });
+  }
   return art;
 }
+
+// A guide pixel's area color as one number, or -1 where the guide has no area.
+function guideKey(guide, i) {
+  const o = i * 4;
+  return guide[o + 3] ? (guide[o] << 16) | (guide[o + 1] << 8) | guide[o + 2] : -1;
+}
+
+// The pixel of an area nearest to (x, y), for taps that land on an area's soft edge; -1 when
+// there's none close by.
+function nearestGuided(guide, ink, w, h, x, y) {
+  for (let r = 0; r <= GUIDE_SNAP; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const i = ny * w + nx;
+        if (!ink[i] && guideKey(guide, i) >= 0) return i;
+      }
+    }
+  }
+  return -1;
+}
+
+// How far (px) a tap may be from an area and still fill it, and how far a guided fill spreads
+// past its area into the blended pixels along its edge.
+const GUIDE_SNAP = 8;
+const GUIDE_FRINGE = 3;
 
 // Thins ink to one-pixel-wide center lines (Zhang-Suen).
 function skeletonize(ink, w, h) {
@@ -524,7 +563,7 @@ function inkDistance(blocked, w, h) {
 // rises again past its narrowest point, so the growth stops there instead of spilling out.
 // Wider gaps, where a line simply stops short of another, are closed by invisible walls
 // (see lineEndWalls) that the fill treats like ink and then colors in.
-export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tolerance = 64) {
+export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, { guide = null, tolerance = 64 } = {}) {
   const { width: w, height: h } = ctx.canvas;
   x = Math.floor(x);
   y = Math.floor(y);
@@ -537,8 +576,21 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
 
   // How much the background darkens each pixel (1 = white), which pixels are ink, and how
   // far each pixel is from ink.
-  const { shade = null, blocked = null, walls = null, distance = null } = bg ? lineArt(background) : {};
-  if (blocked && blocked[y * w + x]) return false;
+  // With a color guide the areas are known, so only the ink blocks (no gap closing).
+  // A tap on a spot the guide has no area for fills the plain way (without gap closing), so
+  // a tap never does nothing.
+  let gd = guide?.data;
+  const art = bg ? lineArt(background, !gd) : {};
+  const { shade = null, walls = null, distance = null } = art;
+  const blocked = art.blocked ?? art.ink ?? null;
+  let tap = gd ? nearestGuided(gd, art.ink, w, h, x, y) : y * w + x;
+  if (tap < 0) {
+    gd = null;
+    tap = y * w + x;
+  }
+  if (blocked && blocked[tap]) return false;
+  x = tap % w;
+  y = (tap - x) / w;
 
   // What's visible at each pixel (drawing alpha-blended over background, white if none),
   // with the background's shading divided back out, so an outline's soft gray edge counts
@@ -597,7 +649,12 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
     }
   }
   const closing = distance && distance[seed] > gap;
-  const inside = closing ? (i) => distance[i] > gap && matches(i) : matches;
+  const area = gd ? guideKey(gd, seed) : -1;
+  const inside = gd
+    ? (i) => guideKey(gd, i) === area && matches(i)
+    : closing
+      ? (i) => distance[i] > gap && matches(i)
+      : matches;
   // Pixels at the edge of the first pass, where the growth toward the lines starts.
   const edge = [];
 
@@ -614,6 +671,8 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
     for (; i < rowStart + w && !visited[i] && inside(i); i++) {
       paint(i);
       if (closing && distance[i] <= gap + 2) edge.push(i);
+      else if (gd && ((i % w > 0 && !gd[(i - 1) * 4 + 3]) || (i % w < w - 1 && !gd[(i + 1) * 4 + 3]) ||
+        (row > 0 && !gd[(i - w) * 4 + 3]) || (row < h - 1 && !gd[(i + w) * 4 + 3]))) edge.push(i);
       if (row > 0) {
         const up = i - w;
         const open = !visited[up] && inside(up);
@@ -626,6 +685,25 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
         if (open && !downOpen) stack.push(down);
         downOpen = open;
       }
+    }
+  }
+
+  // A guided fill also covers the blended pixels along its area's edge, which belong to no area.
+  if (gd) {
+    let ring = edge.splice(0);
+    for (let step = 0; step < GUIDE_FRINGE && ring.length; step++) {
+      const next = [];
+      for (const i of ring) {
+        const cx = i % w;
+        for (const [dx, dy] of NEIGHBORS) {
+          const j = i + dy * w + dx;
+          if (cx + dx < 0 || cx + dx >= w || j < 0 || j >= n) continue;
+          if (visited[j] || gd[j * 4 + 3] || !matches(j)) continue;
+          paint(j);
+          next.push(j);
+        }
+      }
+      ring = next;
     }
   }
 

@@ -70,13 +70,13 @@ export function cleanIdea(raw) {
 
 export function coloringPrompt(idea) {
   return [
-    `A coloring page for a young child showing: ${idea}.`,
-    'Black and white line art only: thick, solid black outlines of even width on a pure white background.',
-    'Every shape is fully closed, like a paint-bucket coloring book: each outline joins up with itself or with another line, with no gaps, breaks or open ends.',
-    'Where one thing overlaps another, the back outline meets the front outline exactly, with no missing piece of line between them.',
-    'Draw each line as one continuous stroke; no sketchy, dashed or loose lines, no decorative strokes that end in the middle of a shape.',
-    'Simple, friendly, cartoon style with a few large open areas to color in; keep things apart rather than piled up.',
-    'No shading, no gray, no color fills, no hatching, no text, no border.',
+    `A page from a children's coloring book for a young child showing: ${idea}.`,
+    'Already colored in: every area is filled with one flat, solid color, and thick solid black outlines of even width go around every area.',
+    'Use only 5 to 7 bright, clearly different colors in the whole picture, plus white for the background. Two areas that touch always have different colors, even parts of one thing (for example leaves, stems and grass in different greens).',
+    'Black is only for the outlines and small details like pupils; things like tires or hair get a color, never solid black.',
+    'Every outline is closed and joins up with the lines around it, with no gaps.',
+    'Simple, friendly, cartoon style with a few large areas, easy for a young child; keep things apart rather than piled up.',
+    'No shading, no gradients, no highlights, no shadows, no texture, no patterns, no gray, no text, no border.',
   ].join(' ');
 }
 

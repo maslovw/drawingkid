@@ -22,8 +22,22 @@ import {
   regionMask,
   toLineArt,
 } from './render.js';
+import { splitColoredPage } from './colorguide.js';
 
 const MAX_UNDO = 50;
+
+// `?debug=guide` shows a colored page's area guide over it (no area: see-through), and
+// `?debug=source` shows the colored page as it came from the generator.
+const DEBUG_VIEW = new URLSearchParams(globalThis.location?.search ?? '').get('debug');
+
+// Draws an image as large as fits, centered on the canvas.
+function drawFitted(ctx, image) {
+  const { width: W, height: H } = ctx.canvas;
+  const iw = image.naturalWidth ?? image.width;
+  const ih = image.naturalHeight ?? image.height;
+  const scale = Math.min(W / iw, H / ih);
+  ctx.drawImage(image, (W - iw * scale) / 2, (H - ih * scale) / 2, iw * scale, ih * scale);
+}
 const MAX_REGION_MASKS = 64;
 
 // crypto.randomUUID only exists on HTTPS/localhost pages; getRandomValues works everywhere,
@@ -90,9 +104,11 @@ export class DrawingDocument extends EventTarget {
   }
 
   // Scales an image to fit the page (on white) and makes it the background.
-  // `lineArt` cleans it up into crisp black-and-white for coloring; `clear` starts a fresh
-  // page (in the same undo step, so one undo brings the old drawing back).
-  async importBackground(file, { lineArt = false, clear = false } = {}) {
+  // `lineArt` cleans it up into crisp black-and-white for coloring; `colored` takes a page
+  // that's already colored in, keeps only its outlines, and keeps its colors as a guide to
+  // its areas (see colorguide.js); `clear` starts a fresh page (in the same undo step, so one
+  // undo brings the old drawing back).
+  async importBackground(file, { lineArt = false, colored = false, clear = false } = {}) {
     const { width: W, height: H } = this;
     const url = URL.createObjectURL(file);
     try {
@@ -100,17 +116,27 @@ export class DrawingDocument extends EventTarget {
       img.src = url;
       await img.decode();
       const canvas = createCanvas(W, H);
-      const ctx = canvas.getContext('2d', { willReadFrequently: lineArt });
+      const ctx = canvas.getContext('2d', { willReadFrequently: lineArt || colored });
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
-      const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight);
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-      if (lineArt) toLineArt(ctx);
+      drawFitted(ctx, img);
+      let guide = null;
+      let source = null;
+      if (colored) {
+        // The colored original is kept too, so a page whose areas come out wrong can be
+        // looked at later (see DEBUG_VIEW).
+        source = { blob: file, bitmap: await createImageBitmap(file) };
+        const page = splitColoredPage(ctx.getImageData(0, 0, W, H));
+        ctx.putImageData(new ImageData(page.lineArt, W, H), 0, 0);
+        const guideCanvas = createCanvas(W, H);
+        guideCanvas.getContext('2d').putImageData(new ImageData(page.guide, W, H), 0, 0);
+        guide = { blob: await canvasToBlob(guideCanvas), bitmap: guideCanvas };
+      } else if (lineArt) {
+        toLineArt(ctx);
+      }
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
       const imageId = newId();
-      this.images.set(imageId, { blob, bitmap: canvas });
+      this.images.set(imageId, { blob, bitmap: canvas, guide, source });
       this.commit(clear ? { type: 'background', imageId, clear } : { type: 'background', imageId });
     } finally {
       URL.revokeObjectURL(url);
@@ -186,6 +212,12 @@ export class DrawingDocument extends EventTarget {
       ops: this.ops,
       redo: this.redoStack,
       images: Object.fromEntries([...used].map((id) => [id, this.images.get(id).blob])),
+      guides: Object.fromEntries(
+        [...used].filter((id) => this.images.get(id).guide).map((id) => [id, this.images.get(id).guide.blob]),
+      ),
+      sources: Object.fromEntries(
+        [...used].filter((id) => this.images.get(id).source).map((id) => [id, this.images.get(id).source.blob]),
+      ),
     };
   }
 
@@ -193,7 +225,11 @@ export class DrawingDocument extends EventTarget {
     // Version 1 saves predate per-page sizes and were always 2048×1536.
     this.#reset(data.width ?? DEFAULT_SIZE.width, data.height ?? DEFAULT_SIZE.height);
     for (const [id, blob] of Object.entries(data.images ?? {})) {
-      this.images.set(id, { blob, bitmap: await createImageBitmap(blob) });
+      const guideBlob = data.guides?.[id];
+      const guide = guideBlob ? { blob: guideBlob, bitmap: await createImageBitmap(guideBlob) } : null;
+      const sourceBlob = data.sources?.[id];
+      const source = sourceBlob ? { blob: sourceBlob, bitmap: await createImageBitmap(sourceBlob) } : null;
+      this.images.set(id, { blob, bitmap: await createImageBitmap(blob), guide, source });
     }
     if (data.base) this.baseCtx.drawImage(await createImageBitmap(data.base), 0, 0);
     this.baseBlob = data.base ?? null;
@@ -219,9 +255,10 @@ export class DrawingDocument extends EventTarget {
     this.baseBlob = null; // cached PNG of `base` for saving
     this.ops = [];
     this.redoStack = [];
-    this.images = new Map(); // imageId -> { blob, bitmap }
+    this.images = new Map(); // imageId -> { blob, bitmap, guide, source }; the last two are { blob, bitmap } | null
     this.background = null; // imageId currently shown
     this.bgCache = { id: null, data: null };
+    this.guideCache = { id: null, data: null };
     this.regionCache = { id: null, regions: null, masks: new Map() };
     this.version ??= 0;
     this.dispatchEvent(new Event('resize'));
@@ -243,7 +280,9 @@ export class DrawingDocument extends EventTarget {
         for (const stroke of op.strokes) this.#drawStroke(ctx, stroke, state.background);
         return true;
       case 'fill':
-        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone);
+        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone, {
+          guide: this.#guideData(state.background),
+        });
       case 'background':
         if (op.clear) ctx.clearRect(0, 0, this.width, this.height);
         state.background = op.imageId;
@@ -269,7 +308,7 @@ export class DrawingDocument extends EventTarget {
   // Area masks of one picture at a time, made on first use.
   #regions(id, background) {
     if (this.regionCache.id !== id) {
-      this.regionCache = { id, regions: labelRegions(background), masks: new Map() };
+      this.regionCache = { id, regions: labelRegions(background, this.#guideData(id)), masks: new Map() };
     }
     return this.regionCache.regions;
   }
@@ -305,9 +344,17 @@ export class DrawingDocument extends EventTarget {
     ctx.fillRect(0, 0, this.width, this.height);
     const image = this.background && this.images.get(this.background);
     if (image) ctx.drawImage(image.bitmap, 0, 0);
+    if (image?.source && DEBUG_VIEW === 'source') drawFitted(ctx, image.source.bitmap);
+    if (image?.guide && DEBUG_VIEW === 'guide') {
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(image.guide.bitmap, 0, 0);
+      ctx.globalAlpha = 1;
+    }
     // Finding where the page's lines need closing takes a moment: do it before the first tap.
     const id = this.background;
-    if (image) setTimeout(() => this.background === id && prepareFill(this.#backgroundData(id)), 50);
+    if (image) {
+      setTimeout(() => this.background === id && prepareFill(this.#backgroundData(id), this.#guideData(id)), 50);
+    }
   }
 
   #backgroundData(id) {
@@ -318,6 +365,18 @@ export class DrawingDocument extends EventTarget {
       this.bgCache = { id, data: ctx.getImageData(0, 0, this.width, this.height) };
     }
     return this.bgCache.data;
+  }
+
+  // The current picture's color guide as pixels, or null for a picture without one.
+  #guideData(id) {
+    const guide = id && this.images.get(id)?.guide;
+    if (!guide) return null;
+    if (this.guideCache.id !== id) {
+      const ctx = createCanvas(this.width, this.height).getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(guide.bitmap, 0, 0);
+      this.guideCache = { id, data: ctx.getImageData(0, 0, this.width, this.height) };
+    }
+    return this.guideCache.data;
   }
 
   #changed() {

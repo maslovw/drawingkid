@@ -40,10 +40,10 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Palette | 10 colors plus two special ones, and 3 brush sizes. **Rainbow** 🌈 changes color smoothly along the line; with the fill bucket it fills an area with a rainbow. **Surprise color** picks a random palette color for every line, tap and finger (never white, never the same twice in a row). Picking a color while erasing switches back to the last drawing tool. |
 | Palettes | Three buttons under the brush sizes switch between **Classic**, **Vibrant** (neon) and **Pastel** colors. Each button shows four dots of its colors. The same color slots are used in every palette, so Settings still chooses which ones show. Rainbow and Surprise follow the palette (a pastel rainbow is soft). Lines already drawn keep their color. The choice is remembered on the device. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
-| Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
+| Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. Small breaks in the outlines, and lines that stop just short of another line, are closed by the fill. |
 | Inside / Free switch | Shown next to the tools while there's a picture. **Inside**: each line (pen, pencil, marker, eraser) stays in the area of the picture where it started and never crosses the picture's outlines; a line started on an outline begins in the first area it reaches. **Free**: draw anywhere (the default). Only the picture's lines are borders, not what the kid drew. Remembered per device. |
 | Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
-| Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
+| Create | Type one sentence ("a dinosaur eating ice cream") and get a coloring page from OpenAI or Gemini. |
 | Log | In Settings, **Log** shows how many coloring pages were made (in total and this month), what they cost, and every request with the child's words, the model, token counts and any error. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
@@ -119,7 +119,7 @@ Model names change often, so Settings has a **Refresh** button next to the model
 
 Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the device's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`, see *HTTPS on the home network*) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
 
-The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The canvas is cleared and the page becomes the background layer. One undo brings back the previous drawing.
+The app wraps the sentence in a prompt for a coloring page that's already colored in: 5–7 flat colors, thick black outlines, no shading, no text. It then removes the colors, keeping only the outlines (and drawing a line wherever two colors meet without one), and keeps the colors as a guide to the page's areas. The fill bucket and Inside mode use the guide, so each area fills exactly, even where an outline has a gap or one circle sits inside another. The guide is saved with the drawing. The canvas is cleared and the page becomes the background layer. One undo brings back the previous drawing.
 
 The browser calls the provider's API directly with the key. The key comes from `config.local.json` (see above) or is typed in Settings and stored in this browser's `localStorage` only. Anyone using the device can read the key, so use a key with a spending limit. Hosts that block outside connections (such as a page hosted on claude.ai) can't use this feature.
 
@@ -160,6 +160,7 @@ web/
     ├── viewmodel.js      selected tool/color/size, config updates
     ├── document.js       op log, undo/redo, layer rendering, (de)serialization
     ├── render.js         stroke drawing + flood fill
+    ├── colorguide.js     colored generated page → outlines + area guide
     ├── input.js          pointer events → strokes/fills, live preview
     ├── storage.js        IndexedDB autosave
     ├── imagegen.js       coloring pages via OpenAI / Gemini

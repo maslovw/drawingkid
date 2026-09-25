@@ -179,14 +179,14 @@ function drawClippedStroke(ctx, stroke, region) {
 
 // Splits a picture into its areas: connected pixels that aren't outline ink. Returns
 // { labels, count, width, height }, where labels[i] is the area of pixel i (0 = ink).
+// Gaps where a line stops short of another are closed by the same invisible walls the fill
+// uses (see lineEndWalls); each wall pixel then joins an area next to it.
 export function labelRegions(background) {
-  const { width: w, height: h, data: bg } = background;
+  const { width: w, height: h } = background;
   const n = w * h;
+  const { ink, walls } = lineArt(background);
   const labels = new Int32Array(n);
-  for (let i = 0, o = 0; i < n; i++, o += 4) {
-    const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
-    labels[i] = lum < INK_LUMINANCE ? 0 : -1; // -1: not labelled yet
-  }
+  for (let i = 0; i < n; i++) labels[i] = ink[i] || walls[i] ? 0 : -1; // -1: not labelled yet
   let count = 0;
   const stack = [];
   for (let seed = 0; seed < n; seed++) {
@@ -215,6 +215,26 @@ export function labelRegions(background) {
         }
       }
     }
+  }
+  // Walls are a few pixels thick: hand them out to their neighbors from the outside in.
+  let pending = [];
+  for (let i = 0; i < n; i++) if (walls[i]) pending.push(i);
+  while (pending.length) {
+    const next = [];
+    const found = [];
+    for (const i of pending) {
+      const cx = i % w;
+      let label = 0;
+      for (const [dx, dy] of NEIGHBORS) {
+        const j = i + dy * w + dx;
+        if (cx + dx >= 0 && cx + dx < w && j >= 0 && j < n && !ink[j] && labels[j] > 0) label = labels[j];
+      }
+      if (label) found.push(i, label);
+      else next.push(i);
+    }
+    if (!found.length) break;
+    for (let k = 0; k < found.length; k += 2) labels[found[k]] = found[k + 1];
+    pending = next;
   }
   return { labels, count, width: w, height: h };
 }
@@ -287,12 +307,223 @@ function hexToRgb(hex) {
 // Background pixels darker than this are outline "ink": fills stop at them and never cover them.
 const INK_LUMINANCE = 128;
 
+// Gaps in the outlines narrower than twice this (as a share of the page's long side) are
+// closed by the fill: generated pages often leave a line a little short where objects overlap.
+const GAP_RADIUS = 1 / 200;
+
+// A line that stops short of another line within this reach (share of the long side) is
+// extended to it by an invisible wall, the way a child sees the shape as closed.
+const LINE_END_REACH = 1 / 40;
+
+// Per background: which pixels are ink, which are invisible walls closing line ends, how much
+// each pixel darkens, and how far each one is from ink or wall.
+const lineArtCache = new WeakMap();
+
+// Works out a page's lines ahead of its first fill (the result is cached).
+export function prepareFill(background) {
+  if (background) lineArt(background);
+}
+
+function lineArt(background) {
+  let art = lineArtCache.get(background);
+  if (art) return art;
+  const { width: w, height: h, data: bg } = background;
+  const n = w * h;
+  const shade = new Float32Array(n);
+  const ink = new Uint8Array(n);
+  for (let i = 0, o = 0; i < n; i++, o += 4) {
+    const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
+    ink[i] = lum < INK_LUMINANCE ? 1 : 0;
+    shade[i] = Math.max(lum, 1) / 255;
+  }
+  const walls = lineEndWalls(ink, w, h, Math.round(Math.max(w, h) * LINE_END_REACH));
+  const blocked = new Uint8Array(n);
+  for (let i = 0; i < n; i++) blocked[i] = ink[i] | walls[i];
+  art = { ink, walls, blocked, shade, distance: inkDistance(blocked, w, h) };
+  lineArtCache.set(background, art);
+  return art;
+}
+
+// Thins ink to one-pixel-wide center lines (Zhang-Suen).
+function skeletonize(ink, w, h) {
+  const s = Uint8Array.from(ink);
+  let pixels = [];
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) if (s[y * w + x]) pixels.push(y * w + x);
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (let pass = 0; pass < 2; pass++) {
+      const remove = [];
+      for (const i of pixels) {
+        if (!s[i]) continue;
+        // Neighbors clockwise from north.
+        const p = [s[i - w], s[i - w + 1], s[i + 1], s[i + w + 1], s[i + w], s[i + w - 1], s[i - 1], s[i - w - 1]];
+        const count = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + p[6] + p[7];
+        if (count < 2 || count > 6) continue;
+        let rises = 0;
+        for (let k = 0; k < 8; k++) if (!p[k] && p[(k + 1) % 8]) rises++;
+        if (rises !== 1) continue;
+        if (pass === 0 ? p[0] * p[2] * p[4] || p[2] * p[4] * p[6] : p[0] * p[2] * p[6] || p[0] * p[4] * p[6]) continue;
+        remove.push(i);
+      }
+      for (const i of remove) s[i] = 0;
+      if (remove.length) changed = true;
+    }
+    pixels = pixels.filter((i) => s[i]);
+  }
+  return s;
+}
+
+// Skeleton neighbors of `i`, not counting ones in `skip`.
+function skeletonNeighbors(skel, w, i, skip) {
+  const out = [];
+  for (const [dx, dy] of NEIGHBORS) {
+    const j = i + dy * w + dx;
+    if (skel[j] && !skip.has(j)) out.push(j);
+  }
+  return out;
+}
+
+const adjacent = (w, a, b) => Math.abs((a % w) - (b % w)) <= 1 && Math.abs(Math.floor(a / w) - Math.floor(b / w)) <= 1;
+
+// Walls that close gaps where a line stops short of another: each line end is followed back
+// along its center line to get its direction, then extended; if the extension meets ink
+// within `reach`, the stretch in between becomes a wall. Short strokes and branch stubs
+// (smile ticks, the tips of stars, thinning artifacts) are skipped, as their direction is
+// unreliable, and so are lines that belong to small drawings of their own (a balloon's
+// highlight, eyelashes, stars on a hat): only the outlines of whole things get closed.
+function lineEndWalls(ink, w, h, reach) {
+  const walls = new Uint8Array(w * h);
+  const skel = skeletonize(ink, w, h);
+  const sizes = inkComponentSizes(ink, w, h);
+  const minSize = 3 * reach * reach;
+  const trace = Math.max(8, Math.round(reach / 2));
+  const thickness = Math.max(1, Math.round(reach / 30));
+  const inside = (x, y) => x >= 1 && y >= 1 && x < w - 1 && y < h - 1;
+
+  for (let i = 0; i < skel.length; i++) {
+    if (!skel[i] || !inside(i % w, Math.floor(i / w)) || sizes[i] < minSize) continue;
+    const first = skeletonNeighbors(skel, w, i, new Set());
+    const isEnd = first.length === 1 || (first.length === 2 && adjacent(w, first[0], first[1]));
+    if (!isEnd) continue;
+
+    // Walk back along the line.
+    const seen = new Set([i]);
+    let cur = i;
+    let steps = 0;
+    for (; steps < trace; steps++) {
+      let next = skeletonNeighbors(skel, w, cur, seen);
+      // Staircase corners give two touching candidates: take the straight one.
+      if (next.length === 2 && adjacent(w, next[0], next[1])) {
+        next = [next.find((j) => j % w === cur % w || Math.floor(j / w) === Math.floor(cur / w)) ?? next[0]];
+      }
+      if (next.length !== 1) break;
+      for (const j of skeletonNeighbors(skel, w, cur, seen)) seen.add(j);
+      cur = next[0];
+      if (!inside(cur % w, Math.floor(cur / w))) break;
+    }
+    if (steps < trace) continue;
+
+    const ex = i % w, ey = Math.floor(i / w);
+    let dx = ex - (cur % w), dy = ey - Math.floor(cur / w);
+    const len = Math.hypot(dx, dy);
+    dx /= len;
+    dy /= len;
+
+    // Out through the line's own rounded end, then across the gap.
+    let t = 1;
+    const at = (t) => {
+      const x = Math.round(ex + dx * t), y = Math.round(ey + dy * t);
+      return inside(x, y) ? y * w + x : -1;
+    };
+    while (t < reach && at(t) >= 0 && ink[at(t)]) t++;
+    const gapStart = t;
+    while (t < gapStart + reach && at(t) >= 0 && !ink[at(t)]) t++;
+    if (at(t) < 0 || !ink[at(t)] || t === gapStart) continue;
+    for (let k = gapStart - 1; k <= t; k++) {
+      const x = Math.round(ex + dx * k), y = Math.round(ey + dy * k);
+      for (let oy = -thickness; oy <= thickness; oy++) {
+        for (let ox = -thickness; ox <= thickness; ox++) {
+          if (inside(x + ox, y + oy) && !ink[(y + oy) * w + x + ox]) walls[(y + oy) * w + x + ox] = 1;
+        }
+      }
+    }
+  }
+  return walls;
+}
+
+// For each ink pixel, how many pixels its connected piece of ink has.
+function inkComponentSizes(ink, w, h) {
+  const sizes = new Uint32Array(w * h);
+  const piece = [];
+  for (let s = 0; s < ink.length; s++) {
+    if (!ink[s] || sizes[s]) continue;
+    piece.length = 0;
+    piece.push(s);
+    sizes[s] = 1;
+    for (let k = 0; k < piece.length; k++) {
+      const i = piece[k];
+      const cx = i % w;
+      for (const [dx, dy] of NEIGHBORS) {
+        const j = i + dy * w + dx;
+        if (cx + dx < 0 || cx + dx >= w || j < 0 || j >= ink.length || !ink[j] || sizes[j]) continue;
+        sizes[j] = 1;
+        piece.push(j);
+      }
+    }
+    for (const i of piece) sizes[i] = piece.length;
+  }
+  return sizes;
+}
+
+// Approximate distance from each pixel to the nearest blocked pixel (two-pass chamfer, 1 and √2).
+// Every pixel's value comes from a neighbor one step closer to the ink, which the gap-closing
+// fill relies on to reach all the way to the lines.
+function inkDistance(blocked, w, h) {
+  const d = new Float32Array(w * h);
+  const D = Math.SQRT2;
+  for (let i = 0; i < d.length; i++) d[i] = blocked[i] ? 0 : Infinity;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let v = d[i];
+      if (x > 0) v = Math.min(v, d[i - 1] + 1);
+      if (y > 0) {
+        v = Math.min(v, d[i - w] + 1);
+        if (x > 0) v = Math.min(v, d[i - w - 1] + D);
+        if (x < w - 1) v = Math.min(v, d[i - w + 1] + D);
+      }
+      d[i] = v;
+    }
+  }
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x;
+      let v = d[i];
+      if (x < w - 1) v = Math.min(v, d[i + 1] + 1);
+      if (y < h - 1) {
+        v = Math.min(v, d[i + w] + 1);
+        if (x < w - 1) v = Math.min(v, d[i + w + 1] + D);
+        if (x > 0) v = Math.min(v, d[i + w - 1] + D);
+      }
+      d[i] = v;
+    }
+  }
+  return d;
+}
+
 // Paint-bucket fill on the drawing layer. Region boundaries come from what the child *sees*
 // (drawing composited over the background), so coloring-page outlines in an uploaded image
 // contain the fill even though the fill itself only touches the drawing layer.
 // The outlines themselves are never painted over: dark background pixels are walls, and the
 // light gray pixels along their edges get the fill color shaded by the gray, so the lines keep
 // their full, smooth width. Returns false when nothing changed.
+//
+// Small gaps in the outlines are closed. The fill first covers only pixels farther than the
+// gap radius from any ink, which can't squeeze through a gap, then grows from there toward
+// the lines, stepping only to pixels strictly closer to ink. Inside a gap the distance to ink
+// rises again past its narrowest point, so the growth stops there instead of spilling out.
+// Wider gaps, where a line simply stops short of another, are closed by invisible walls
+// (see lineEndWalls) that the fill treats like ink and then colors in.
 export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tolerance = 64) {
   const { width: w, height: h } = ctx.canvas;
   x = Math.floor(x);
@@ -304,17 +535,10 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
   const bg = background?.data;
   const n = w * h;
 
-  // How much the background darkens each pixel (1 = white), and which pixels are ink.
-  const shade = bg ? new Float32Array(n) : null;
-  const ink = bg ? new Uint8Array(n) : null;
-  if (bg) {
-    for (let i = 0, o = 0; i < n; i++, o += 4) {
-      const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
-      ink[i] = lum < INK_LUMINANCE ? 1 : 0;
-      shade[i] = Math.max(lum, 1) / 255;
-    }
-    if (ink[y * w + x]) return false;
-  }
+  // How much the background darkens each pixel (1 = white), which pixels are ink, and how
+  // far each pixel is from ink.
+  const { shade = null, blocked = null, walls = null, distance = null } = bg ? lineArt(background) : {};
+  if (blocked && blocked[y * w + x]) return false;
 
   // What's visible at each pixel (drawing alpha-blended over background, white if none),
   // with the background's shading divided back out, so an outline's soft gray edge counts
@@ -338,8 +562,7 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
   const startOffset = (y * w + x) * 4;
   if (!rainbow && sr === fr && sg === fg && sb === fb && d[startOffset + 3] === 255) return false;
 
-  const matches = (i) => {
-    if (ink && ink[i]) return false;
+  const sameColor = (i) => {
     const c = i * 3;
     return (
       Math.abs(comp[c] - sr) <= tolerance &&
@@ -347,49 +570,162 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
       Math.abs(comp[c + 2] - sb) <= tolerance
     );
   };
+  const matches = (i) => !(blocked && blocked[i]) && sameColor(i);
+
+  const visited = new Uint8Array(n);
+  const paint = (i) => {
+    visited[i] = 1;
+    const o = i * 4;
+    const s = shade ? shade[i] : 1;
+    const c = rainbow ? columns[i % w] : null;
+    d[o] = (c ? c[0] : fr) * s;
+    d[o + 1] = (c ? c[1] : fg) * s;
+    d[o + 2] = (c ? c[2] : fb) * s;
+    d[o + 3] = 255;
+  };
+
+  // Where the gap-closing fill starts: the tap itself, or, when the tap is close to a line,
+  // the first pixel clear of the gap radius found by walking away from the lines. A region
+  // too narrow to have one is filled the plain way.
+  const gap = Math.max(3, Math.round(Math.max(w, h) * GAP_RADIUS));
+  let seed = y * w + x;
+  if (distance) {
+    while (distance[seed] <= gap) {
+      const next = farthestNeighbor(distance, w, h, seed, matches);
+      if (next < 0) break;
+      seed = next;
+    }
+  }
+  const closing = distance && distance[seed] > gap;
+  const inside = closing ? (i) => distance[i] > gap && matches(i) : matches;
+  // Pixels at the edge of the first pass, where the growth toward the lines starts.
+  const edge = [];
 
   // Scanline flood fill.
-  const visited = new Uint8Array(n);
-  const stack = [y * w + x];
+  const stack = [seed];
   while (stack.length) {
     let i = stack.pop();
     if (visited[i]) continue;
     const row = Math.floor(i / w);
     const rowStart = row * w;
-    while (i > rowStart && !visited[i - 1] && matches(i - 1)) i--;
+    while (i > rowStart && !visited[i - 1] && inside(i - 1)) i--;
     let upOpen = false;
     let downOpen = false;
-    for (; i < rowStart + w && !visited[i] && matches(i); i++) {
-      visited[i] = 1;
-      const o = i * 4;
-      const s = shade ? shade[i] : 1;
-      if (rainbow) {
-        const c = columns[i - rowStart];
-        d[o] = c[0] * s;
-        d[o + 1] = c[1] * s;
-        d[o + 2] = c[2] * s;
-      } else {
-        d[o] = fr * s;
-        d[o + 1] = fg * s;
-        d[o + 2] = fb * s;
-      }
-      d[o + 3] = 255;
+    for (; i < rowStart + w && !visited[i] && inside(i); i++) {
+      paint(i);
+      if (closing && distance[i] <= gap + 2) edge.push(i);
       if (row > 0) {
         const up = i - w;
-        const open = !visited[up] && matches(up);
+        const open = !visited[up] && inside(up);
         if (open && !upOpen) stack.push(up);
         upOpen = open;
       }
       if (row < h - 1) {
         const down = i + w;
-        const open = !visited[down] && matches(down);
+        const open = !visited[down] && inside(down);
         if (open && !downOpen) stack.push(down);
         downOpen = open;
       }
     }
   }
+
+  // Grow toward the lines, only ever stepping closer to ink. Pixels it can't step to are
+  // remembered: they're either past a gap or in a narrow nook beyond a pinch.
+  const skipped = [];
+  while (edge.length) {
+    const i = edge.pop();
+    const cx = i % w;
+    for (const [dx, dy] of NEIGHBORS) {
+      const nx = cx + dx;
+      const j = i + dy * w + dx;
+      if (nx < 0 || nx >= w || j < 0 || j >= n) continue;
+      if (visited[j] || !matches(j)) continue;
+      if (distance[j] >= distance[i]) {
+        skipped.push(j);
+        continue;
+      }
+      paint(j);
+      edge.push(j);
+    }
+  }
+
+  // A nook left beyond a pinch is filled when it's small; past a gap there's always the next
+  // area, which is too big to count as a nook.
+  if (skipped.length) {
+    const explored = new Uint8Array(n);
+    const maxNook = 12 * gap * gap;
+    for (const s of skipped) {
+      if (visited[s] || explored[s]) continue;
+      const nook = [s];
+      explored[s] = 1;
+      let open = false;
+      for (let k = 0; k < nook.length && !open; k++) {
+        const i = nook[k];
+        const cx = i % w;
+        for (const [dx, dy] of NEIGHBORS) {
+          const nx = cx + dx;
+          const j = i + dy * w + dx;
+          if (nx < 0 || nx >= w || j < 0 || j >= n) continue;
+          if (visited[j] || explored[j] || !matches(j)) continue;
+          if (nook.length >= maxNook) {
+            open = true;
+            break;
+          }
+          explored[j] = 1;
+          nook.push(j);
+        }
+      }
+      if (!open) nook.forEach(paint);
+    }
+  }
+
+  // The invisible walls take the color of the area they close, where it's still unpainted.
+  if (walls) {
+    const stack = [];
+    for (let i = 0; i < n; i++) if (walls[i] && !visited[i] && sameColor(i) && touches(visited, w, h, i)) stack.push(i);
+    while (stack.length) {
+      const i = stack.pop();
+      if (visited[i]) continue;
+      paint(i);
+      const cx = i % w;
+      for (const [dx, dy] of NEIGHBORS) {
+        const j = i + dy * w + dx;
+        if (cx + dx >= 0 && cx + dx < w && j >= 0 && j < n && walls[j] && !visited[j] && sameColor(j)) stack.push(j);
+      }
+    }
+  }
+
   ctx.putImageData(image, 0, 0);
   return true;
+}
+
+const NEIGHBORS = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+
+// Whether any neighbor of pixel `i` is set in `mask`.
+function touches(mask, w, h, i) {
+  const cx = i % w;
+  for (const [dx, dy] of NEIGHBORS) {
+    const j = i + dy * w + dx;
+    if (cx + dx >= 0 && cx + dx < w && j >= 0 && j < w * h && mask[j]) return true;
+  }
+  return false;
+}
+
+// The neighbor of pixel `i` farthest from ink, if it's farther than `i` and passes `ok`; else -1.
+function farthestNeighbor(distance, w, h, i, ok) {
+  const cx = i % w;
+  let best = -1;
+  let bestDistance = distance[i];
+  for (const [dx, dy] of NEIGHBORS) {
+    const nx = cx + dx;
+    const j = i + dy * w + dx;
+    if (nx < 0 || nx >= w || j < 0 || j >= w * h) continue;
+    if (distance[j] > bestDistance && ok(j)) {
+      best = j;
+      bestDistance = distance[j];
+    }
+  }
+  return best;
 }
 
 // Cleans generated line art: near-white becomes pure white and near-black pure black, so

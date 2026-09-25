@@ -122,8 +122,11 @@ async function getJson(url, headers, name) {
 export function coloringPrompt(idea) {
   return [
     `A coloring page for a young child showing: ${idea.trim()}.`,
-    'Black and white line art only: thick, clean, closed black outlines on a pure white background.',
-    'Simple, friendly, cartoon style with large open areas to color in.',
+    'Black and white line art only: thick, solid black outlines of even width on a pure white background.',
+    'Every shape is fully closed, like a paint-bucket coloring book: each outline joins up with itself or with another line, with no gaps, breaks or open ends.',
+    'Where one thing overlaps another, the back outline meets the front outline exactly, with no missing piece of line between them.',
+    'Draw each line as one continuous stroke; no sketchy, dashed or loose lines, no decorative strokes that end in the middle of a shape.',
+    'Simple, friendly, cartoon style with a few large open areas to color in; keep things apart rather than piled up.',
     'No shading, no gray, no color fills, no hatching, no text, no border.',
   ].join(' ');
 }

@@ -18,6 +18,7 @@ import {
   drawStroke,
   floodFill,
   labelRegions,
+  prepareFill,
   regionMask,
   toLineArt,
 } from './render.js';
@@ -304,6 +305,9 @@ export class DrawingDocument extends EventTarget {
     ctx.fillRect(0, 0, this.width, this.height);
     const image = this.background && this.images.get(this.background);
     if (image) ctx.drawImage(image.bitmap, 0, 0);
+    // Finding where the page's lines need closing takes a moment: do it before the first tap.
+    const id = this.background;
+    if (image) setTimeout(() => this.background === id && prepareFill(this.#backgroundData(id)), 50);
   }
 
   #backgroundData(id) {

@@ -112,6 +112,13 @@ const GLYPHS = {
   <circle cx="12" cy="22" r="1.6" fill="#2E2A26" stroke="none"/>
   <circle cx="42" cy="4" r="2.5" fill="#BFE3FF" stroke-width="1.5"/>`,
 
+  // Coloring mode: the scribble stays inside the heart, or runs out of it.
+  inside: `<path d="M24 42 C10 32 4 24 4 16 C4 9 9 5 15 5 C19 5 22 7 24 11 C26 7 29 5 33 5 C39 5 44 9 44 16 C44 24 38 32 24 42 Z" fill="#FFFFFF" stroke-width="3.5"/>
+  <path class="ink-line" d="M13 15 L20 12 L12 22 L28 12 L17 28 L35 15 L24 32 L34 24" fill="none" stroke-width="3.5"/>`,
+
+  anywhere: `<path d="M24 42 C10 32 4 24 4 16 C4 9 9 5 15 5 C19 5 22 7 24 11 C26 7 29 5 33 5 C39 5 44 9 44 16 C44 24 38 32 24 42 Z" fill="#FFFFFF" stroke-width="3.5"/>
+  <path class="ink-line" d="M2 30 L20 12 L10 40 L34 8 L26 44 L46 22" fill="none" stroke-width="3.5"/>`,
+
   more: `<circle cx="10" cy="24" r="5.5" fill="#EE5A45"/>
   <circle cx="24" cy="24" r="5.5" fill="#FFC93C"/>
   <circle cx="38" cy="24" r="5.5" fill="#4A9BE8"/>`,

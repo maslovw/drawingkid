@@ -1,6 +1,8 @@
 // The drawing document: an operation log with undo/redo, rendered onto two layers
 // (background image + drawing). Ops are small vector records, so undo is exact:
-//   { type: 'stroke', tool, color, size, points, hue?, tone? }   color 'rainbow' starts at `hue`
+//   { type: 'stroke', tool, color, size, points, hue?, tone?, inside? }
+//                                    color 'rainbow' starts at `hue`; `inside` ([x, y]) keeps the
+//                                    stroke within the picture's area at that point
 //   { type: 'strokes', strokes }      several fingers drawing at once, undone together
 //   { type: 'fill', x, y, color, tone? }    color 'rainbow' fills with a rainbow across the page;
 //                                    `tone` is the palette's rainbow saturation/lightness
@@ -9,9 +11,19 @@
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.
 // Each page has its own size, chosen to fit the screen when the page is started.
 
-import { DEFAULT_SIZE, createCanvas, canvasToBlob, drawStroke, floodFill, toLineArt } from './render.js';
+import {
+  DEFAULT_SIZE,
+  createCanvas,
+  canvasToBlob,
+  drawStroke,
+  floodFill,
+  labelRegions,
+  regionMask,
+  toLineArt,
+} from './render.js';
 
 const MAX_UNDO = 50;
+const MAX_REGION_MASKS = 64;
 
 // crypto.randomUUID only exists on HTTPS/localhost pages; getRandomValues works everywhere,
 // including the app opened over plain http:// on the home network.
@@ -104,6 +116,39 @@ export class DrawingDocument extends EventTarget {
     }
   }
 
+  // True when a picture is showing, so strokes can stay inside its lines.
+  get hasPicture() {
+    return Boolean(this.background && this.images.has(this.background));
+  }
+
+  // Where a stroke staying inside the lines is kept: the first of its points that lies in an
+  // area of the current picture (not on an outline). Null when there's no picture, or when
+  // every point is on a line.
+  insideSeed(points) {
+    const background = this.#backgroundData(this.background);
+    if (!background) return null;
+    const { labels } = this.#regions(this.background, background);
+    for (let i = 0; i < points.length; i += 2) {
+      const x = Math.floor(points[i]);
+      const y = Math.floor(points[i + 1]);
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height) continue;
+      if (labels[y * this.width + x] > 0) return [x, y];
+    }
+    return null;
+  }
+
+  // Finds the current picture's areas ahead of time (it takes a moment on a big page), so
+  // the first stroke in coloring mode starts without a pause.
+  prepareInside() {
+    const background = this.#backgroundData(this.background);
+    if (background) this.#regions(this.background, background);
+  }
+
+  // The area of the current picture a stroke with this seed stays in (for the live preview).
+  insideRegion(seed) {
+    return this.#region(this.background, seed);
+  }
+
   // Background + drawing flattened into one canvas (for export and AI).
   composite(width = this.width, height = this.height) {
     const canvas = createCanvas(width, height);
@@ -176,6 +221,7 @@ export class DrawingDocument extends EventTarget {
     this.images = new Map(); // imageId -> { blob, bitmap }
     this.background = null; // imageId currently shown
     this.bgCache = { id: null, data: null };
+    this.regionCache = { id: null, regions: null, masks: new Map() };
     this.version ??= 0;
     this.dispatchEvent(new Event('resize'));
   }
@@ -190,10 +236,10 @@ export class DrawingDocument extends EventTarget {
   #apply(ctx, op, state) {
     switch (op.type) {
       case 'stroke':
-        drawStroke(ctx, op);
+        this.#drawStroke(ctx, op, state.background);
         return true;
       case 'strokes':
-        for (const stroke of op.strokes) drawStroke(ctx, stroke);
+        for (const stroke of op.strokes) this.#drawStroke(ctx, stroke, state.background);
         return true;
       case 'fill':
         return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone);
@@ -208,6 +254,40 @@ export class DrawingDocument extends EventTarget {
       default:
         return false;
     }
+  }
+
+  #drawStroke(ctx, stroke, background) {
+    if (!stroke.inside) {
+      drawStroke(ctx, stroke);
+      return;
+    }
+    const region = this.#region(background, stroke.inside);
+    if (region) drawStroke(ctx, stroke, region);
+  }
+
+  // Area masks of one picture at a time, made on first use.
+  #regions(id, background) {
+    if (this.regionCache.id !== id) {
+      this.regionCache = { id, regions: labelRegions(background), masks: new Map() };
+    }
+    return this.regionCache.regions;
+  }
+
+  #region(id, [x, y]) {
+    const background = this.#backgroundData(id);
+    if (!background) return null;
+    const regions = this.#regions(id, background);
+    const label = regions.labels[y * this.width + x];
+    if (!(label > 0)) return null;
+    const { masks } = this.regionCache;
+    let region = masks.get(label);
+    if (region === undefined) {
+      if (masks.size >= MAX_REGION_MASKS) masks.delete(masks.keys().next().value);
+      region = regionMask(regions, background, label);
+    }
+    masks.delete(label); // most recently used last
+    masks.set(label, region);
+    return region;
   }
 
   #bake(op) {

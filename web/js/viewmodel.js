@@ -3,6 +3,7 @@
 import { TOOLS, COLORS, SIZES, DEFAULT_CONFIG, applyManaged, saveConfig, surpriseColor, colorValue, paletteById } from './config.js';
 
 const PALETTE_KEY = 'drawingkid.palette';
+const INSIDE_KEY = 'drawingkid.inside';
 
 export class AppViewModel extends EventTarget {
   // `managed` holds settings fixed by the server's config.local.json.
@@ -14,7 +15,10 @@ export class AppViewModel extends EventTarget {
     this.lastDrawingTool = this.tool;
     this.color = config.visibleColors[0];
     this.size = config.defaultSize;
-    this.palette = paletteById(readPalette()).id;
+    this.palette = paletteById(readStored(PALETTE_KEY)).id;
+    // Coloring mode: on a picture, strokes stay inside the lines where they start.
+    this.inside = readStored(INSIDE_KEY) === 'true';
+    this.hasPicture = false;
   }
 
   // True when config.local.json sets this (for imageModels: this provider's model).
@@ -33,6 +37,7 @@ export class AppViewModel extends EventTarget {
       color,
       size: SIZES.find((s) => s.id === this.size).px,
       tone: paletteById(this.palette).tone,
+      inside: this.inside,
     };
   }
 
@@ -54,11 +59,20 @@ export class AppViewModel extends EventTarget {
   // Switching palettes keeps the selected slot (red stays red, just a different red).
   setPalette(id) {
     this.palette = paletteById(id).id;
-    try {
-      localStorage.setItem(PALETTE_KEY, this.palette);
-    } catch {
-      // Not remembered, but still switched.
-    }
+    writeStored(PALETTE_KEY, this.palette);
+    this.#changed();
+  }
+
+  setInside(inside) {
+    this.inside = inside;
+    writeStored(INSIDE_KEY, String(inside));
+    this.#changed();
+  }
+
+  // Whether the page shows a picture; the coloring-mode switch only matters then.
+  setHasPicture(hasPicture) {
+    if (hasPicture === this.hasPicture) return;
+    this.hasPicture = hasPicture;
     this.#changed();
   }
 
@@ -123,10 +137,18 @@ function toggled(all, current, id, visible) {
   return all.map((x) => x.id).filter((x) => (x === id ? visible : current.includes(x)));
 }
 
-function readPalette() {
+function readStored(key) {
   try {
-    return localStorage.getItem(PALETTE_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
+  }
+}
+
+function writeStored(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Not remembered, but still switched.
   }
 }

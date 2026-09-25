@@ -89,6 +89,10 @@ const GLYPHS = {
     .join('')}
   <circle cx="24" cy="24" r="13" fill="#AAB7C4"/>
   <circle cx="24" cy="24" r="5" fill="#FFFFFF"/>`,
+
+  more: `<circle cx="10" cy="24" r="5.5" fill="#EE5A45"/>
+  <circle cx="24" cy="24" r="5.5" fill="#FFC93C"/>
+  <circle cx="38" cy="24" r="5.5" fill="#4A9BE8"/>`,
 };
 GLYPHS.redo = `<g transform="translate(48 0) scale(-1 1)">${GLYPHS.undo}</g>`;
 

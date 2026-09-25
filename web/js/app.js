@@ -206,27 +206,43 @@ for (const item of $('more-menu').querySelectorAll('[data-for]')) {
 
 // --- Coloring page generator --------------------------------------------
 
-const IDEAS = ['A dinosaur eating ice cream', 'A cat astronaut on the moon', 'A castle with a friendly dragon', 'An underwater tea party'];
+// Idea pictures read without words: tapping one fills in its sentence.
+const IDEAS = [
+  { glyph: 'dino', label: 'Dinosaur', text: 'A friendly dinosaur having a picnic' },
+  { glyph: 'rocket', label: 'Rocket', text: 'A rocket flying to the moon' },
+  { glyph: 'castle', label: 'Castle', text: 'A castle with a friendly dragon' },
+  { glyph: 'fish', label: 'Fish', text: 'A happy fish under the sea' },
+];
 let generation = null; // AbortController while a page is being made
 
-$('create-chips').replaceChildren(
-  ...IDEAS.map((idea) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = idea;
-    b.addEventListener('click', () => {
-      voice.stop();
-      $('create-idea').value = idea;
-    });
-    return b;
-  }),
-);
+const ideaTiles = IDEAS.map((idea) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'idea-tile';
+  b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', idea.text);
+  b.innerHTML = `<span class="icon" aria-hidden="true">${icon(idea.glyph)}</span><span class="caption">${idea.label}</span>`;
+  b.addEventListener('click', () => {
+    voice.stop();
+    $('create-idea').value = idea.text;
+    syncIdeaTiles();
+  });
+  return b;
+});
+$('create-chips').replaceChildren(...ideaTiles);
+
+function syncIdeaTiles() {
+  const value = $('create-idea').value;
+  ideaTiles.forEach((b, i) => b.setAttribute('aria-pressed', String(IDEAS[i].text === value)));
+}
+$('create-idea').addEventListener('input', syncIdeaTiles);
 
 $('create').addEventListener('click', () => {
   const { imageProvider } = vm.config;
   $('create-status').textContent = loadApiKeys()[imageProvider]
     ? ''
-    : `Ask a grown-up to add an API key for ${PROVIDERS[imageProvider].label} in Settings first.`;
+    : `Ask a grown-up to add the ${PROVIDERS[imageProvider].label} key in Settings.`;
+  syncIdeaTiles();
   $('create-dialog').showModal();
   voice.start(); // listen straight away; the keyboard button is there for typing
 });
@@ -251,7 +267,7 @@ $('create-go').addEventListener('click', async () => {
   generation = new AbortController();
   dialog.setAttribute('aria-busy', 'true');
   $('create-go').disabled = true;
-  $('create-status').textContent = 'Drawing your page… this takes about 10–30 seconds.';
+  $('create-status').textContent = '';
   try {
     const model = imageModels[provider];
     let result;
@@ -279,12 +295,13 @@ $('create-go').addEventListener('click', async () => {
     await doc.importBackground(result.blob, { lineArt: true, clear: true });
     dialog.close();
     $('create-idea').value = '';
+    syncIdeaTiles();
     vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
     toast('Your coloring page is ready! 🖍️');
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error(error);
-      $('create-status').textContent = error.message || 'Something went wrong. Please try again.';
+      $('create-status').textContent = `Oops! Let's try again. (${error.message || 'Something went wrong.'})`;
     }
   } finally {
     generation = null;

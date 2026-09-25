@@ -90,6 +90,28 @@ const GLYPHS = {
   <circle cx="24" cy="24" r="13" fill="#AAB7C4"/>
   <circle cx="24" cy="24" r="5" fill="#FFFFFF"/>`,
 
+  close: `<path d="M14 14 L34 34 M34 14 L14 34" stroke-width="5"/>`,
+
+  // Idea pictures for the coloring page generator.
+  dino: `<path d="M3 36 Q8 26 18 25 L28 25 Q31 12 38 9 Q45 7 45 13 Q45 17 40 17 Q37 19 37 26 Q37 34 33 36 L33 42 L28 42 L28 37 L19 37 L19 42 L14 42 L14 36 Q8 36 3 36 Z" fill="#4CB872"/>
+  <path d="M17 25 L19 20 L22 25 M23 25 L25 20 L28 25" fill="#FFC93C" stroke-width="2"/>
+  <circle cx="40" cy="12.5" r="1.4" fill="#2E2A26" stroke="none"/>`,
+
+  rocket: `<path d="M24 3 Q34 11 33 27 L33 34 L15 34 L15 27 Q14 11 24 3 Z" fill="#FFFFFF"/>
+  <path d="M15 24 L8 33 L8 38 L15 34 Z M33 24 L40 33 L40 38 L33 34 Z" fill="#EE5A45"/>
+  <circle cx="24" cy="19" r="4.5" fill="#BFE3FF"/>
+  <path class="flame" d="M18 34 L30 34 Q29 41 24 46 Q19 41 18 34 Z" fill="#FFC93C"/>`,
+
+  castle: `<path d="M6 44 L6 16 L6 12 L10 12 L10 15 L13 15 L13 12 L17 12 L17 22 L31 22 L31 12 L35 12 L35 15 L38 15 L38 12 L42 12 L42 44 Z" fill="#AAB7C4"/>
+  <path d="M19 44 L19 35 Q24 29 29 35 L29 44 Z" fill="#8B5E3C"/>
+  <path d="M24 22 L24 6" stroke-width="2"/>
+  <path d="M24 6 L33 9 L24 12 Z" fill="#EE5A45" stroke-width="2"/>`,
+
+  fish: `<path d="M5 24 Q15 11 30 16 L41 9 L39 24 L41 39 L30 32 Q15 37 5 24 Z" fill="#4A9BE8"/>
+  <path d="M19 17 Q23 24 19 31" stroke-width="2"/>
+  <circle cx="12" cy="22" r="1.6" fill="#2E2A26" stroke="none"/>
+  <circle cx="42" cy="4" r="2.5" fill="#BFE3FF" stroke-width="1.5"/>`,
+
   more: `<circle cx="10" cy="24" r="5.5" fill="#EE5A45"/>
   <circle cx="24" cy="24" r="5.5" fill="#FFC93C"/>
   <circle cx="38" cy="24" r="5.5" fill="#4A9BE8"/>`,

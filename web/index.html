@@ -206,18 +206,28 @@
 
     <dialog id="create-dialog" class="confirm create">
       <form method="dialog">
-        <p class="confirm-title">What should we color?</p>
-        <div class="idea-row">
-          <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="A dragon having a picnic with a bunny" />
-          <button id="create-mic" class="voice-btn" type="button" title="Say it" aria-label="Say it" autofocus hidden><span class="icon" aria-hidden="true" data-icon="mic"></span></button>
-          <button id="create-keyboard" class="voice-btn" type="button" title="Type it" aria-label="Type it" hidden><span class="icon" aria-hidden="true" data-icon="keyboard"></span></button>
+        <button class="close-btn" value="cancel" aria-label="Close" title="Close"><span class="icon" aria-hidden="true" data-icon="close"></span></button>
+        <div class="create-ask">
+          <p class="confirm-title">What shall we color?</p>
+          <button id="create-mic" class="voice-btn mic-big" type="button" title="Say it" aria-label="Say it" autofocus hidden><span class="icon" aria-hidden="true" data-icon="mic"></span></button>
+          <div class="idea-row">
+            <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="Say it or type it" aria-label="What to draw" />
+            <button id="create-keyboard" class="voice-btn" type="button" title="Type it" aria-label="Type it" hidden><span class="icon" aria-hidden="true" data-icon="keyboard"></span></button>
+          </div>
+          <p id="create-voice-hint" class="hint voice-hint" role="status" hidden></p>
+          <div class="idea-tiles" id="create-chips" role="group" aria-label="Ideas"></div>
+          <p id="create-status" class="create-status" role="status"></p>
+          <button id="create-go" type="button" class="go-btn"><span class="icon" aria-hidden="true" data-icon="create"></span>Make it!</button>
         </div>
-        <p id="create-voice-hint" class="hint voice-hint" role="status" hidden></p>
-        <div class="idea-chips" id="create-chips"></div>
-        <p id="create-status" class="hint" role="status"></p>
-        <div class="confirm-actions">
-          <button id="create-go" type="button" class="primary">Make my page</button>
-          <button value="cancel">Cancel</button>
+        <div class="create-wait" role="status">
+          <div class="wait-art" aria-hidden="true">
+            <svg viewBox="0 0 160 150" width="160" height="150">
+              <path class="wait-line" pathLength="100" d="M80 16 L95.9 58.2 L140.9 60.2 L105.7 88.3 L117.6 131.8 L80 107 L42.4 131.8 L54.3 88.3 L19.1 60.2 L64.1 58.2 Z" />
+            </svg>
+            <span class="wait-pencil icon" data-icon="pencil"></span>
+          </div>
+          <p class="wait-title">Drawing your page…</p>
+          <div class="wait-dots" aria-hidden="true"><span></span><span></span><span></span></div>
         </div>
       </form>
     </dialog>

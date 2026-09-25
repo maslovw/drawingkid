@@ -21,14 +21,15 @@ export class VoiceInput {
     this.keyboard = keyboard;
     this.hint = hint;
     this.placeholder = input.placeholder;
-    this.recognition = null;
+    this.recognition = null; // one recognizer, reused: iPad Safari hears nothing on a second new one
+    this.listening = false; // what the kid sees
     this.reason = null;
     this.available = Boolean(Recognition);
     // Browsers only allow the microphone on https:// (or localhost). Safari still offers
     // speech recognition on plain http, but every start fails, so don't try.
     if (this.available && !window.isSecureContext) this.#unavailable('insecure');
 
-    mic.addEventListener('click', () => (this.recognition ? this.stop() : this.start()));
+    mic.addEventListener('click', () => (this.listening ? this.stop() : this.start()));
     keyboard.addEventListener('click', () => {
       this.stop();
       input.focus();
@@ -41,22 +42,31 @@ export class VoiceInput {
     this.#sync();
   }
 
-  // Must be called from a tap handler: browsers only start the microphone for a user gesture.
-  start() {
-    if (!this.available || this.recognition) return;
-    if (this.reason === 'network' || this.reason === 'mic-busy') this.reason = null; // try again
+  #active = false; // between recognition.start() and its 'end'
+  #stopTimer = null;
+  #afterEnd = null; // a start waiting for the previous session to let go of the microphone
+
+  #create() {
     const recognition = new Recognition();
     recognition.lang = navigator.language || 'en-US';
     recognition.interimResults = true;
     recognition.continuous = false;
+    const log = (e) => console.debug('[voice]', e.type, e.error || '');
+    for (const type of ['start', 'audiostart', 'speechstart', 'speechend', 'audioend', 'nomatch']) {
+      recognition.addEventListener(type, log);
+    }
     recognition.addEventListener('result', (e) => {
-      if (this.recognition !== recognition) return;
+      if (this.recognition !== recognition || !this.listening) return;
+      const last = e.results[e.results.length - 1];
+      console.debug('[voice] result', last?.isFinal ? 'final' : 'interim');
       this.input.value = Array.from(e.results, (r) => r[0].transcript).join('');
       // iPad Safari often keeps listening (mic indicator on) after the phrase is done
       // instead of ending by itself, so end it once the phrase is final.
-      if (e.results[e.results.length - 1]?.isFinal) this.stop();
+      if (last?.isFinal) this.stop();
     });
     recognition.addEventListener('error', (e) => {
+      log(e);
+      if (this.recognition !== recognition) return;
       // Blocked or unavailable: don't keep offering a microphone that can't work.
       // Safari reports a turned-off Dictation as 'service-not-allowed'.
       if (e.error === 'not-allowed') this.#unavailable('blocked');
@@ -66,44 +76,63 @@ export class VoiceInput {
       else if (e.error === 'audio-capture') this.#showReason('mic-busy');
       else if (e.error === 'network') this.#showReason('network');
     });
-    recognition.addEventListener('end', () => {
-      clearTimeout(this.#stopTimers.get(recognition));
-      this.#stopTimers.delete(recognition);
-      this.#endWaiters.get(recognition)?.();
-      this.#endWaiters.delete(recognition);
-      if (this.recognition === recognition) this.recognition = null;
-      this.#sync();
+    recognition.addEventListener('end', (e) => {
+      log(e);
+      if (this.recognition !== recognition) return;
+      this.#active = false;
+      clearTimeout(this.#stopTimer);
+      const next = this.#afterEnd;
+      this.#afterEnd = null;
+      if (next) next();
+      else {
+        this.listening = false;
+        this.#sync();
+      }
     });
-
-    this.recognition = recognition;
-    this.#sync();
-    // A previous session still winding down holds the microphone, and starting now fails
-    // with 'audio-capture'. End it and wait for it to let go (at most a second) first.
-    const previous = [...this.#stopTimers.keys()];
-    if (previous.length === 0) this.#begin(recognition);
-    else {
-      Promise.race([
-        Promise.all(previous.map((r) => new Promise((resolve) => this.#endWaiters.set(r, resolve)))),
-        new Promise((resolve) => setTimeout(resolve, 1000)),
-      ]).then(() => {
-        previous.forEach((r) => this.#endWaiters.delete(r));
-        this.#begin(recognition);
-      });
-      previous.forEach((r) => this.#abort(r));
-    }
+    return recognition;
   }
 
-  #endWaiters = new Map();
+  // Must be called from a tap handler: browsers only start the microphone for a user gesture.
+  start() {
+    if (!this.available || this.listening) return;
+    if (this.reason === 'network' || this.reason === 'mic-busy') this.reason = null; // try again
+    this.recognition ??= this.#create();
+    this.listening = true;
+    this.#sync();
+    if (!this.#active) return this.#begin();
+    // The previous session is still winding down and holds the microphone. End it and
+    // start once it lets go, or after a second if Safari never says so.
+    const fallback = setTimeout(() => {
+      this.#afterEnd = null;
+      this.#begin();
+    }, 1000);
+    this.#afterEnd = () => {
+      clearTimeout(fallback);
+      this.#begin();
+    };
+    this.#abort();
+  }
 
-  #begin(recognition) {
-    if (this.recognition !== recognition) return; // stopped while waiting
+  #begin() {
+    if (!this.listening) return; // stopped while waiting
     try {
-      recognition.start();
+      this.recognition.start();
     } catch (error) {
+      // Still busy with a session that never ended: start over with a fresh recognizer.
       console.warn('Speech recognition failed to start', error);
-      this.recognition = null;
-      this.#sync();
+      this.#abort();
+      this.recognition = this.#create();
+      try {
+        this.recognition.start();
+      } catch (retryError) {
+        console.warn('Speech recognition failed to start again', retryError);
+        this.listening = false;
+        this.#sync();
+        return;
+      }
     }
+    this.#active = true;
+    console.debug('[voice] started');
   }
 
   #unavailable(reason) {
@@ -119,37 +148,35 @@ export class VoiceInput {
   // Safari doesn't always end on stop(), which leaves the microphone on. Ask it to stop,
   // and abort only if it still hasn't ended a few seconds later. (Calling stop() and abort()
   // back to back left iPad Safari listening on the next start but recognizing nothing.)
-  #stopTimers = new Map();
-
   stop() {
-    const recognition = this.recognition;
-    this.recognition = null;
-    if (recognition) {
+    if (!this.listening) return;
+    this.listening = false;
+    this.#afterEnd = null;
+    if (this.#active) {
       try {
-        recognition.stop();
+        this.recognition.stop();
       } catch (error) {
         console.warn('Speech recognition failed to stop', error);
       }
-      this.#stopTimers.set(
-        recognition,
-        setTimeout(() => this.#abort(recognition), 3000),
-      );
+      clearTimeout(this.#stopTimer);
+      this.#stopTimer = setTimeout(() => {
+        if (this.#active && !this.listening) this.#abort();
+      }, 3000);
     }
     this.#sync();
   }
 
-  #abort(recognition) {
-    clearTimeout(this.#stopTimers.get(recognition));
-    this.#stopTimers.delete(recognition);
+  #abort() {
+    clearTimeout(this.#stopTimer);
     try {
-      recognition.abort();
+      this.recognition?.abort();
     } catch (error) {
       console.warn('Speech recognition failed to abort', error);
     }
   }
 
   #sync() {
-    const listening = Boolean(this.recognition);
+    const { listening } = this;
     this.mic.hidden = !this.available;
     this.keyboard.hidden = !this.available;
     this.mic.classList.toggle('listening', listening);

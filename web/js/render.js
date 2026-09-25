@@ -175,10 +175,15 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+// Background pixels darker than this are outline "ink": fills stop at them and never cover them.
+const INK_LUMINANCE = 128;
+
 // Paint-bucket fill on the drawing layer. Region boundaries come from what the child *sees*
 // (drawing composited over the background), so coloring-page outlines in an uploaded image
 // contain the fill even though the fill itself only touches the drawing layer.
-// Returns false when nothing changed.
+// The outlines themselves are never painted over: dark background pixels are walls, and the
+// light gray pixels along their edges get the fill color shaded by the gray, so the lines keep
+// their full, smooth width. Returns false when nothing changed.
 export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tolerance = 64) {
   const { width: w, height: h } = ctx.canvas;
   x = Math.floor(x);
@@ -190,13 +195,28 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
   const bg = background?.data;
   const n = w * h;
 
-  // What's visible at each pixel: drawing alpha-blended over background (white if none).
+  // How much the background darkens each pixel (1 = white), and which pixels are ink.
+  const shade = bg ? new Float32Array(n) : null;
+  const ink = bg ? new Uint8Array(n) : null;
+  if (bg) {
+    for (let i = 0, o = 0; i < n; i++, o += 4) {
+      const lum = 0.299 * bg[o] + 0.587 * bg[o + 1] + 0.114 * bg[o + 2];
+      ink[i] = lum < INK_LUMINANCE ? 1 : 0;
+      shade[i] = Math.max(lum, 1) / 255;
+    }
+    if (ink[y * w + x]) return false;
+  }
+
+  // What's visible at each pixel (drawing alpha-blended over background, white if none),
+  // with the background's shading divided back out, so an outline's soft gray edge counts
+  // as part of the area next to it and a shaded fill matches its plain color.
   const comp = new Uint8ClampedArray(n * 3);
   for (let i = 0, o = 0, c = 0; i < n; i++, o += 4, c += 3) {
     const a = d[o + 3] / 255;
+    const s = shade ? shade[i] : 1;
     for (let k = 0; k < 3; k++) {
       const under = bg ? bg[o + k] : 255;
-      comp[c + k] = d[o + k] * a + under * (1 - a);
+      comp[c + k] = (d[o + k] * a + under * (1 - a)) / s;
     }
   }
 
@@ -210,6 +230,7 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
   if (!rainbow && sr === fr && sg === fg && sb === fb && d[startOffset + 3] === 255) return false;
 
   const matches = (i) => {
+    if (ink && ink[i]) return false;
     const c = i * 3;
     return (
       Math.abs(comp[c] - sr) <= tolerance &&
@@ -232,15 +253,16 @@ export function floodFill(ctx, background, x, y, color, tone = DEFAULT_TONE, tol
     for (; i < rowStart + w && !visited[i] && matches(i); i++) {
       visited[i] = 1;
       const o = i * 4;
+      const s = shade ? shade[i] : 1;
       if (rainbow) {
         const c = columns[i - rowStart];
-        d[o] = c[0];
-        d[o + 1] = c[1];
-        d[o + 2] = c[2];
+        d[o] = c[0] * s;
+        d[o + 1] = c[1] * s;
+        d[o + 2] = c[2] * s;
       } else {
-        d[o] = fr;
-        d[o + 1] = fg;
-        d[o + 2] = fb;
+        d[o] = fr * s;
+        d[o + 1] = fg * s;
+        d[o + 2] = fb * s;
       }
       d[o + 3] = 255;
       if (row > 0) {

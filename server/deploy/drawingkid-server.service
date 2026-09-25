@@ -1,0 +1,24 @@
+# /etc/systemd/system/drawingkid-server.service on lsp (same pattern as diabetic-recipes).
+[Unit]
+Description=Drawing Kid backend (AI coloring pages, star ledger)
+After=network.target
+
+[Service]
+Type=simple
+User=drawingkid
+WorkingDirectory=/opt/drawingkid-server
+EnvironmentFile=/opt/drawingkid-server/.env
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8787
+Environment=DATA_DIR=/opt/drawingkid-server/data
+ExecStart=/usr/bin/env node --disable-warning=ExperimentalWarning src/main.js
+Restart=always
+RestartSec=5
+MemoryMax=300M
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/drawingkid-server/data
+
+[Install]
+WantedBy=multi-user.target

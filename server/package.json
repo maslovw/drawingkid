@@ -1,0 +1,15 @@
+{
+  "name": "drawingkid-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Drawing Kid backend: AI coloring-page proxy, star ledger and StoreKit verification",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/main.js",
+    "dev": "DEV_MODE=1 PROVIDER=mock node --disable-warning=ExperimentalWarning --watch src/main.js",
+    "test": "node --disable-warning=ExperimentalWarning --test 'test/*.test.js'"
+  }
+}

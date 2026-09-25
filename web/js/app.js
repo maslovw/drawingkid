@@ -22,7 +22,7 @@ setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
-new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
+new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors'), brush: $('brush') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
 const log = new LogView($('log-dialog'));
@@ -135,6 +135,74 @@ $('file').addEventListener('change', async (e) => {
     toast("Oops, that picture couldn't be opened.");
   }
 });
+
+// --- Phone popovers --------------------------------------------------------
+// On a phone the brush sizes and palettes, and the less used actions, sit in popovers
+// opened from the Brush and More buttons. Elsewhere those buttons are hidden by CSS.
+
+const popovers = [
+  { anchor: $('brush'), el: $('brush-tray'), show: (el, on) => el.classList.toggle('open', on) },
+  { anchor: $('more'), el: $('more-menu'), show: (el, on) => (el.hidden = !on) },
+];
+
+function isOpen(p) {
+  return p.anchor.getAttribute('aria-expanded') === 'true';
+}
+
+function setOpen(p, on) {
+  p.show(p.el, on);
+  p.anchor.setAttribute('aria-expanded', String(on));
+  if (on) placePopover(p.el, p.anchor);
+}
+
+function closePopovers() {
+  for (const p of popovers) if (isOpen(p)) setOpen(p, false);
+}
+
+// Beside the anchor in landscape (towards the paper), above or below it in portrait.
+function placePopover(el, anchor) {
+  const a = anchor.getBoundingClientRect();
+  const p = el.getBoundingClientRect();
+  const gap = 10;
+  const edge = 8;
+  const clamp = (v, max) => Math.min(Math.max(v, edge), max - edge);
+  let left, top;
+  if (innerWidth > innerHeight) {
+    left = a.left + a.width / 2 < innerWidth / 2 ? a.right + gap : a.left - gap - p.width;
+    top = clamp(a.top + a.height / 2 - p.height / 2, innerHeight - p.height);
+  } else {
+    left = clamp(a.left + a.width / 2 - p.width / 2, innerWidth - p.width);
+    top = a.top + a.height / 2 < innerHeight / 2 ? a.bottom + gap : a.top - gap - p.height;
+  }
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+}
+
+for (const p of popovers) {
+  p.anchor.addEventListener('click', () => {
+    const on = !isOpen(p);
+    closePopovers();
+    setOpen(p, on);
+  });
+}
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    for (const p of popovers) if (isOpen(p) && !p.el.contains(e.target) && !p.anchor.contains(e.target)) setOpen(p, false);
+  },
+  true,
+);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePopovers();
+});
+addEventListener('resize', closePopovers);
+
+for (const item of $('more-menu').querySelectorAll('[data-for]')) {
+  item.addEventListener('click', () => {
+    closePopovers();
+    $(item.dataset.for).click();
+  });
+}
 
 // --- Coloring page generator --------------------------------------------
 

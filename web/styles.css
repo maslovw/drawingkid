@@ -885,3 +885,285 @@ dialog::backdrop {
 .log-empty {
   color: var(--muted);
 }
+
+/* ---- Phone layout ----
+   On an iPhone the iPad layout doesn't fit: the top bar is wider than the screen and the
+   landscape height is too short for the side rails. The phone layout keeps undo, Create
+   and colors in reach and moves the rest behind two buttons:
+   - Brush opens a tray with sizes and palettes (anchored by js/app.js).
+   - More opens a menu with Picture, Save, Start over and Settings.
+   Portrait: undo and actions on top, colors in two rows of six, tools along the bottom.
+   Landscape: tools and colors on the non-drawing hand's side, undo and actions opposite. */
+
+.brush,
+.more {
+  display: none;
+}
+
+.brush-tray {
+  display: contents;
+}
+
+.brush-ring {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f4f1ec;
+}
+
+.brush-dot {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+
+.brush[aria-expanded='true'],
+.more[aria-expanded='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.brush[aria-expanded='true'] .brush-ring {
+  background: #fff;
+}
+
+.more-menu {
+  position: fixed;
+  z-index: 10;
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.18);
+}
+
+.more-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 230px;
+  padding: 6px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 14px;
+  background: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.menu-item:active {
+  background: #f7f4ef;
+}
+
+.menu-item .icon {
+  font-size: 1.4rem;
+}
+
+.menu-sub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 10px;
+  background: #f0ebe3;
+}
+
+@media (orientation: portrait) and (max-width: 500px), (orientation: landscape) and (max-height: 459px) {
+  .actions .in-menu,
+  .actions .spacer {
+    display: none;
+  }
+
+  .brush,
+  .more {
+    display: flex;
+  }
+
+  .more {
+    border: 3px solid transparent;
+  }
+
+  /* Undo and redo read without words and the space is tight. */
+  .history .caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .history .action {
+    width: 50px;
+    height: 50px;
+  }
+
+  .brush-tray {
+    display: none;
+    position: fixed;
+    z-index: 10;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 22px;
+    background: var(--panel);
+    box-shadow: 0 12px 36px rgb(0 0 0 / 0.18);
+  }
+
+  .brush-tray.open {
+    display: flex;
+  }
+
+  .brush-tray .group {
+    flex-direction: row;
+    gap: 10px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .brush-tray .size,
+  .brush-tray .palette {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 500px) {
+  .app {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'history actions'
+      'stage   stage'
+      'colors  colors'
+      'tools   tools';
+  }
+
+  .colors {
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: repeat(6, 44px);
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .tools {
+    justify-content: space-between;
+  }
+
+  .tool {
+    width: 54px;
+  }
+
+  /* Create is the one big action on top: a pill with its word beside the glyph. */
+  .actions .magic {
+    flex-direction: row;
+    gap: 6px;
+    width: auto;
+    min-width: 56px;
+    padding: 0 14px 0 8px;
+  }
+
+  .actions .magic .caption {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 459px) {
+  .app {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'start colors stage end';
+  }
+
+  body[data-hand='left'] .app {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'end stage colors start';
+  }
+
+  .rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  .rail-start {
+    grid-area: start;
+    justify-content: center;
+  }
+
+  .rail-end {
+    grid-area: end;
+    justify-content: space-between;
+  }
+
+  .rail .group {
+    grid-area: auto;
+    flex: none;
+  }
+
+  .tools,
+  .history,
+  .actions {
+    flex-direction: column;
+  }
+
+  .tools {
+    gap: 4px;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .tool {
+    height: 50px;
+    font-size: 1.3rem;
+  }
+
+  body[data-labels='off'] .tool .icon {
+    font-size: 1.7rem;
+  }
+
+  .colors {
+    align-self: center;
+    display: grid;
+    grid-template-columns: repeat(2, 44px);
+    gap: 6px;
+    padding: 8px;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .brush-tray {
+    flex-direction: row;
+  }
+
+  .brush-tray .sizes {
+    padding-right: 10px;
+    border-right: 1px solid #f0ebe3;
+  }
+}
+
+/* Dialogs scroll rather than overflow a short phone screen. */
+dialog {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}

@@ -22,11 +22,12 @@
 
       <nav class="group actions" aria-label="Actions">
         <button id="create" class="action magic" type="button" title="Make a coloring page"><span class="icon" aria-hidden="true" data-icon="create"></span><span class="caption">Create</span></button>
-        <button id="import" class="action" type="button" title="Add a picture"><span class="icon" aria-hidden="true" data-icon="picture"></span><span class="caption">Picture</span></button>
-        <button id="export" class="action" type="button" title="Save or share"><span class="icon" aria-hidden="true" data-icon="save"></span><span class="caption">Save</span></button>
+        <button id="import" class="action in-menu" type="button" title="Add a picture"><span class="icon" aria-hidden="true" data-icon="picture"></span><span class="caption">Picture</span></button>
+        <button id="export" class="action in-menu" type="button" title="Save or share"><span class="icon" aria-hidden="true" data-icon="save"></span><span class="caption">Save</span></button>
+        <button id="more" class="action more" type="button" title="More" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu"><span class="icon" aria-hidden="true" data-icon="more"></span><span class="caption">More</span></button>
         <span class="spacer"></span>
-        <button id="clear" class="action" type="button" title="Start over"><span class="icon" aria-hidden="true" data-icon="clear"></span><span class="caption">Clear</span></button>
-        <button id="settings" class="action" type="button" title="Settings (grown-ups)"><span class="icon" aria-hidden="true" data-icon="settings"></span><span class="caption">Settings</span></button>
+        <button id="clear" class="action in-menu" type="button" title="Start over"><span class="icon" aria-hidden="true" data-icon="clear"></span><span class="caption">Clear</span></button>
+        <button id="settings" class="action in-menu" type="button" title="Settings (grown-ups)"><span class="icon" aria-hidden="true" data-icon="settings"></span><span class="caption">Settings</span></button>
       </nav>
       </div>
 
@@ -40,10 +41,21 @@
 
       <div class="rail rail-start">
         <div id="tools" class="group tools" role="toolbar" aria-label="Tools"></div>
-        <div id="sizes" class="group sizes" role="toolbar" aria-label="Brush size"></div>
-        <div id="palettes" class="group palettes" role="toolbar" aria-label="Color palette"></div>
+        <button id="brush" class="tool brush" type="button" title="Brush size and colors" aria-label="Brush size and colors" aria-expanded="false" aria-controls="brush-tray"><span class="brush-ring" aria-hidden="true"><span class="brush-dot"></span></span><span class="caption">Brush</span></button>
+        <div id="brush-tray" class="brush-tray">
+          <div id="sizes" class="group sizes" role="toolbar" aria-label="Brush size"></div>
+          <div id="palettes" class="group palettes" role="toolbar" aria-label="Color palette"></div>
+        </div>
       </div>
       <div id="colors" class="group colors" role="toolbar" aria-label="Colors"></div>
+    </div>
+
+    <div id="more-menu" class="more-menu" role="menu" aria-label="More" hidden>
+      <button class="menu-item" type="button" role="menuitem" data-for="import"><span class="icon" aria-hidden="true" data-icon="picture"></span>Add a picture</button>
+      <button class="menu-item" type="button" role="menuitem" data-for="export"><span class="icon" aria-hidden="true" data-icon="save"></span>Save or share</button>
+      <button class="menu-item" type="button" role="menuitem" data-for="clear"><span class="icon" aria-hidden="true" data-icon="clear"></span>Start over</button>
+      <span class="menu-sep" role="separator"></span>
+      <button class="menu-item" type="button" role="menuitem" data-for="settings"><span class="icon" aria-hidden="true" data-icon="settings"></span><span>Settings<span class="menu-sub">For grown-ups</span></span></button>
     </div>
 
     <input id="file" type="file" accept="image/*" hidden />

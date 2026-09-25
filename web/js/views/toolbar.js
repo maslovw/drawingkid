@@ -4,8 +4,8 @@ import { TOOLS, COLORS, SIZES, PALETTES, colorCss } from '../config.js';
 import { icon } from '../icons.js';
 
 export class ToolbarView {
-  constructor({ tools, sizes, palettes, colors }, vm) {
-    this.els = { tools, sizes, palettes, colors };
+  constructor({ tools, sizes, palettes, colors, brush }, vm) {
+    this.els = { tools, sizes, palettes, colors, brush };
     this.vm = vm;
     vm.addEventListener('change', () => this.render());
     this.render();
@@ -26,7 +26,13 @@ export class ToolbarView {
           onClick: () => vm.setTool(t.id),
         }),
       ),
+      // The phone layout's Brush button, which opens sizes and palettes; hidden elsewhere.
+      this.els.brush,
     );
+    const size = SIZES.find((s) => s.id === vm.size) ?? SIZES[0];
+    const dot = this.els.brush.querySelector('.brush-dot');
+    dot.style.width = dot.style.height = `${Math.round(10 + (size.px / 40) * 14)}px`;
+    dot.style.background = brushColor;
 
     // Size doesn't apply to the paint bucket.
     this.els.sizes.hidden = vm.tool === 'fill';

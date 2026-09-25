@@ -33,6 +33,11 @@ export class VoiceInput {
       this.stop();
       input.focus();
     });
+    // Leaving the page (app switch, tab switch, lock) must not leave the mic on.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.stop();
+    });
+    window.addEventListener('pagehide', () => this.stop());
     this.#sync();
   }
 
@@ -45,7 +50,11 @@ export class VoiceInput {
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.addEventListener('result', (e) => {
+      if (this.recognition !== recognition) return;
       this.input.value = Array.from(e.results, (r) => r[0].transcript).join('');
+      // iPad Safari often keeps listening (mic indicator on) after the phrase is done
+      // instead of ending by itself, so end it once the phrase is final.
+      if (e.results[e.results.length - 1]?.isFinal) this.stop();
     });
     recognition.addEventListener('error', (e) => {
       // Blocked or unavailable: don't keep offering a microphone that can't work.
@@ -56,6 +65,8 @@ export class VoiceInput {
       else if (e.error === 'network') this.#showReason('network');
     });
     recognition.addEventListener('end', () => {
+      clearTimeout(this.#stopTimers.get(recognition));
+      this.#stopTimers.delete(recognition);
       if (this.recognition === recognition) this.recognition = null;
       this.#sync();
     });
@@ -80,10 +91,28 @@ export class VoiceInput {
     this.#sync();
   }
 
+  // Safari doesn't reliably release the microphone on a single stop() or abort(): ask it
+  // to stop, abort as well, and abort again if it still hasn't ended a moment later.
+  #stopTimers = new Map();
+
   stop() {
     const recognition = this.recognition;
     this.recognition = null;
-    recognition?.abort();
+    if (recognition) {
+      try {
+        recognition.stop();
+        recognition.abort();
+      } catch (error) {
+        console.warn('Speech recognition failed to stop', error);
+      }
+      this.#stopTimers.set(
+        recognition,
+        setTimeout(() => {
+          this.#stopTimers.delete(recognition);
+          recognition.abort();
+        }, 1500),
+      );
+    }
     this.#sync();
   }
 

@@ -601,28 +601,321 @@ dialog::backdrop {
   }
 }
 
-.idea-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 10px;
+/* Words are for grown-ups here: the big microphone, idea pictures and one big button
+   carry the dialog for kids who don't read yet. */
+
+.create form {
+  position: relative;
 }
 
-.idea-chips button {
-  padding: 6px 12px;
+.create-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.create-ask .confirm-title {
+  padding: 0 44px;
+}
+
+.create-ask .idea-row {
+  align-self: stretch;
+  margin-top: 0;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: 50%;
   background: #f2efe9;
+}
+
+.close-btn .glyph {
+  width: 22px;
+  height: 22px;
+}
+
+.voice-btn.mic-big {
+  width: 96px;
+  height: 96px;
+  border-width: 3px;
+  border-radius: 50%;
+  background: #fff7e8;
+}
+
+.voice-btn.mic-big .icon .glyph {
+  width: 60px;
+  height: 60px;
+}
+
+.voice-btn.mic-big.listening {
+  animation-name: listening-big;
+}
+
+@keyframes listening-big {
+  50% {
+    box-shadow: 0 0 0 12px rgb(238 90 69 / 0.2);
+  }
+}
+
+.idea-tiles {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.idea-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 84px;
+  padding: 6px 2px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: #f7f4ef;
+}
+
+.idea-tile .icon {
+  font-size: 2rem;
+}
+
+.idea-tile .caption {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.idea-tile[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.create-status {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdecea;
+  color: #b3261e;
   font-size: 0.9rem;
 }
 
-#create-status:empty {
+.create-status:empty {
   display: none;
 }
 
-.create[aria-busy='true'] #create-go {
-  opacity: 0.6;
+.go-btn {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  border: none;
+  border-radius: 18px;
+  background: #ffc93c;
+  box-shadow: 0 4px 0 #e0a800;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.go-btn .icon {
+  font-size: 1.8rem;
+}
+
+.go-btn:active {
+  translate: 0 2px;
+  box-shadow: 0 2px 0 #e0a800;
+}
+
+/* ---- Waiting for the page: a pencil draws a star, over and over ---- */
+
+.create-wait {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 8px;
+}
+
+.create[aria-busy='true'] .create-ask {
+  display: none;
+}
+
+.create[aria-busy='true'] .create-wait {
+  display: flex;
+}
+
+.wait-art {
+  position: relative;
+  width: 160px;
+  height: 150px;
+  border-radius: 18px;
+}
+
+.wait-art svg {
+  display: block;
+}
+
+.wait-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  animation: wait-draw 3.2s ease-in-out infinite, wait-hue 9.6s steps(1) infinite;
+}
+
+.wait-pencil {
+  position: absolute;
+  top: 0;
+  left: 0;
+  --ink: var(--accent);
+  font-size: 1.9rem;
+  offset-path: path('M80 16 L95.9 58.2 L140.9 60.2 L105.7 88.3 L117.6 131.8 L80 107 L42.4 131.8 L54.3 88.3 L19.1 60.2 L64.1 58.2 Z');
+  offset-rotate: 0deg;
+  offset-anchor: 22% 78%; /* the pencil's tip */
+  animation: wait-pencil 3.2s ease-in-out infinite;
+}
+
+@keyframes wait-draw {
+  0% { stroke-dashoffset: 100; opacity: 1; }
+  75% { stroke-dashoffset: 0; opacity: 1; }
+  92% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes wait-pencil {
+  0% { offset-distance: 0%; }
+  75%, 100% { offset-distance: 100%; }
+}
+
+@keyframes wait-hue {
+  0% { stroke: #ee5a45; }
+  33% { stroke: #4a9be8; }
+  66% { stroke: #4cb872; }
+}
+
+.wait-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.wait-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.wait-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ee5a45;
+  animation: wait-bounce 1.2s ease-in-out infinite;
+}
+
+.wait-dots span:nth-child(2) {
+  background: #ffc93c;
+  animation-delay: 0.15s;
+}
+
+.wait-dots span:nth-child(3) {
+  background: #4a9be8;
+  animation-delay: 0.3s;
+}
+
+@keyframes wait-bounce {
+  0%, 60%, 100% { translate: 0 0; }
+  30% { translate: 0 -10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wait-line,
+  .wait-pencil,
+  .wait-dots span {
+    animation: none;
+  }
+
+  .wait-line {
+    stroke-dashoffset: 0;
+  }
+
+  .wait-pencil {
+    offset-distance: 0%;
+  }
+}
+
+/* Short landscape phone: no title, the microphone sits beside the idea box. */
+@media (max-height: 459px) {
+  .create form {
+    padding: 14px 16px 16px;
+  }
+
+  .create-ask {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'mic    idea'
+      'tiles  tiles'
+      'voice  voice'
+      'status status'
+      'go     go';
+    gap: 10px;
+  }
+
+  .create-ask .confirm-title {
+    display: none;
+  }
+
+  .voice-btn.mic-big {
+    grid-area: mic;
+    width: 60px;
+    height: 60px;
+  }
+
+  .voice-btn.mic-big .icon .glyph {
+    width: 38px;
+    height: 38px;
+  }
+
+  .create-ask .idea-row {
+    grid-area: idea;
+    padding-right: 52px; /* clear of the close button */
+  }
+
+  .idea-tiles {
+    grid-area: tiles;
+  }
+
+  .voice-hint {
+    grid-area: voice;
+  }
+
+  .create-status {
+    grid-area: status;
+  }
+
+  .idea-tile {
+    min-height: 60px;
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .go-btn {
+    grid-area: go;
+    min-height: 52px;
+  }
 }
 
 .model-row {

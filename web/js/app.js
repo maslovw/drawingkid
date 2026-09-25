@@ -106,10 +106,30 @@ function toast(message, ms = 2500) {
 
 // --- Action buttons ------------------------------------------------------
 
+let undoBusy = false;
 function syncActions() {
-  $('undo').disabled = !doc.canUndo;
+  $('undo').disabled = undoBusy || !doc.canUndo;
   $('redo').disabled = !doc.canRedo;
   $('create').hidden = !vm.config.enableImageGen;
+}
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+async function performUndo() {
+  if (undoBusy || !doc.canUndo) return;
+  undoBusy = true;
+  syncActions();
+  try {
+    // Let the disabled state paint before a deep replay blocks the main thread.
+    await nextFrame();
+    await nextFrame();
+    doc.undo();
+    // Keep it disabled until the restored drawing has reached a painted frame.
+    await nextFrame();
+    await nextFrame();
+  } finally {
+    undoBusy = false;
+    syncActions();
+  }
 }
 
 doc.addEventListener('change', () => {
@@ -128,7 +148,7 @@ function prepareInside() {
 doc.addEventListener('change', prepareInside);
 vm.addEventListener('change', prepareInside);
 
-$('undo').addEventListener('click', () => doc.undo());
+$('undo').addEventListener('click', performUndo);
 $('redo').addEventListener('click', () => doc.redo());
 $('settings').addEventListener('click', async () => {
   if (await parentGate.ask()) settings.open();
@@ -371,7 +391,7 @@ document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
   if (key === 'z') {
     e.preventDefault();
-    e.shiftKey ? doc.redo() : doc.undo();
+    e.shiftKey ? doc.redo() : performUndo();
   } else if (key === 'y') {
     e.preventDefault();
     doc.redo();

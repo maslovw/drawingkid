@@ -25,6 +25,8 @@ import {
 import { splitColoredPage } from './colorguide.js';
 
 const MAX_UNDO = 50;
+const MAX_UNDO_SNAPSHOTS = 8;
+const MAX_UNDO_SNAPSHOT_BYTES = 64 * 1024 * 1024;
 
 // `?debug=guide` shows a colored page's area guide over it (no area: see-through), and
 // `?debug=source` shows the colored page as it came from the generator.
@@ -79,9 +81,15 @@ export class DrawingDocument extends EventTarget {
   }
 
   // Applies an op and records it. Returns false (and records nothing) for no-op fills.
-  commit(op) {
-    if (!this.#applyLive(op)) return false;
+  commit(op, preState = null) {
+    const cacheable = this.width * this.height * 4 <= MAX_UNDO_SNAPSHOT_BYTES;
+    const state = cacheable ? (preState ?? this.captureUndoState(op.type === 'fill')) : null;
+    if (!this.#applyLive(op)) {
+      if (state) this.#releaseUndoState(state);
+      return false;
+    }
     this.ops.push(op);
+    if (state) this.#cacheUndoState(op, state);
     this.redoStack = [];
     if (this.ops.length > MAX_UNDO) this.#bake(this.ops.shift());
     this.#changed();
@@ -90,16 +98,26 @@ export class DrawingDocument extends EventTarget {
 
   undo() {
     if (!this.ops.length) return;
-    this.redoStack.push(this.ops.pop());
-    this.renderAll();
+    const op = this.ops.pop();
+    this.redoStack.push(op);
+    const state = this.undoCache.get(op);
+    this.undoCache.delete(op);
+    if (state) {
+      this.drawCtx.putImageData(state.pixels, 0, 0);
+      this.background = state.background;
+      this.#renderBackground();
+      this.#releaseUndoState(state);
+    } else this.renderAll();
     this.#changed();
   }
 
   redo() {
     const op = this.redoStack.pop();
     if (!op) return;
+    const state = this.width * this.height * 4 <= MAX_UNDO_SNAPSHOT_BYTES ? this.captureUndoState() : null;
     this.#applyLive(op);
     this.ops.push(op);
+    if (state) this.#cacheUndoState(op, state);
     this.#changed();
   }
 
@@ -185,14 +203,76 @@ export class DrawingDocument extends EventTarget {
     return canvas;
   }
 
-  // Replays base + ops from scratch (used after undo and on load).
+  // Replays base + ops from scratch, rebuilding snapshots for recent operations.
   renderAll() {
     const ctx = this.drawCtx;
+    const bytes = this.width * this.height * 4;
+    const cacheCount = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+    this.undoCache.clear();
+    if (this.undoPool) this.undoPool.free = Array.from({ length: this.undoPool.count }, (_, i) => i);
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.drawImage(this.base, 0, 0);
     this.background = this.baseBackground;
-    for (const op of this.ops) this.#apply(ctx, op, this);
+    for (let i = 0; i < this.ops.length; i++) {
+      const op = this.ops[i];
+      if (i >= this.ops.length - cacheCount) this.#cacheUndoState(op, this.captureUndoState());
+      this.#apply(ctx, op, this);
+    }
     this.#renderBackground();
+  }
+
+  // A pre-operation drawing state. Fills and eraser previews use an independent buffer
+  // until they commit, so cancelled/no-op actions leave the recent cache intact.
+  captureUndoState(independent = false) {
+    if (this.width * this.height * 4 > MAX_UNDO_SNAPSHOT_BYTES) return null;
+    const pixels = this.drawCtx.getImageData(0, 0, this.width, this.height);
+    if (independent) return { pixels, background: this.background };
+    const bytes = pixels.data.byteLength;
+    if (!this.undoPool) {
+      const count = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+      this.undoPool = { buffer: new ArrayBuffer(count * bytes), free: Array.from({ length: count }, (_, i) => i), count };
+    }
+    if (!this.undoPool.free.length) {
+      const oldest = this.undoCache.keys().next().value;
+      const oldState = this.undoCache.get(oldest);
+      this.undoCache.delete(oldest);
+      this.#releaseUndoState(oldState);
+    }
+    const slot = this.undoPool.free.pop();
+    const view = new Uint8ClampedArray(this.undoPool.buffer, slot * bytes, bytes);
+    view.set(pixels.data);
+    return { pixels: new ImageData(view, this.width, this.height), background: this.background, slot };
+  }
+
+  #releaseUndoState(state) {
+    if (state.slot !== undefined) this.undoPool.free.push(state.slot);
+  }
+
+  #cacheUndoState(op, state) {
+    const bytes = this.width * this.height * 4;
+    if (bytes > MAX_UNDO_SNAPSHOT_BYTES) return;
+    if (state.slot === undefined) {
+      if (!this.undoPool) {
+        const count = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+        this.undoPool = { buffer: new ArrayBuffer(count * bytes), free: Array.from({ length: count }, (_, i) => i), count };
+      }
+      if (!this.undoPool.free.length) {
+        const oldest = this.undoCache.keys().next().value;
+        this.#releaseUndoState(this.undoCache.get(oldest));
+        this.undoCache.delete(oldest);
+      }
+      const slot = this.undoPool.free.pop();
+      const view = new Uint8ClampedArray(this.undoPool.buffer, slot * bytes, bytes);
+      view.set(state.pixels.data);
+      state = { pixels: new ImageData(view, this.width, this.height), background: state.background, slot };
+    }
+    this.undoCache.delete(op);
+    this.undoCache.set(op, state);
+    while (this.undoCache.size > MAX_UNDO_SNAPSHOTS || this.undoCache.size * bytes > MAX_UNDO_SNAPSHOT_BYTES) {
+      const oldest = this.undoCache.keys().next().value;
+      this.#releaseUndoState(this.undoCache.get(oldest));
+      this.undoCache.delete(oldest);
+    }
   }
 
   async serialize() {
@@ -255,6 +335,8 @@ export class DrawingDocument extends EventTarget {
     this.baseBlob = null; // cached PNG of `base` for saving
     this.ops = [];
     this.redoStack = [];
+    this.undoCache = new Map(); // op -> { pixels, background }; never serialized
+    this.undoPool = null;
     this.images = new Map(); // imageId -> { blob, bitmap, guide, source }; the last two are { blob, bitmap } | null
     this.background = null; // imageId currently shown
     this.bgCache = { id: null, data: null };

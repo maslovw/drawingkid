@@ -16,6 +16,8 @@ export class CanvasInput {
     this.strokes = []; // every stroke of the current gesture, in the order they started
     this.unseeded = new Set(); // strokes staying inside the lines that haven't left a line yet
     this.frame = 0;
+    this.preGestureState = null;
+    this.preGestureVersion = null;
 
     surface.addEventListener('pointerdown', (e) => this.#down(e));
     surface.addEventListener('pointermove', (e) => this.#move(e));
@@ -49,6 +51,10 @@ export class CanvasInput {
       if (brush.color === 'rainbow') fill.tone = brush.tone;
       this.doc.commit(fill);
       return;
+    }
+    if (brush.tool === 'eraser' && !this.preGestureState) {
+      this.preGestureState = this.doc.captureUndoState(true);
+      this.preGestureVersion = this.doc.version;
     }
     this.surface.setPointerCapture(e.pointerId);
     const stroke = { type: 'stroke', tool: brush.tool, color: brush.color, size: brush.size, points: [x, y] };
@@ -117,6 +123,10 @@ export class CanvasInput {
     // The eraser previews directly on the drawing layer, so restore it; strokes still
     // going are redrawn on the next frame.
     if (entries.some(([, a]) => a.stroke.tool === 'eraser')) this.doc.renderAll();
+    if (!this.strokes.some((stroke) => stroke.tool === 'eraser')) {
+      this.preGestureState = null;
+      this.preGestureVersion = null;
+    }
     if (this.active.size) this.#scheduleDraw();
     else this.#commit();
   }
@@ -129,7 +139,17 @@ export class CanvasInput {
     this.strokes = [];
     this.unseeded.clear();
     this.liveCtx.clearRect(0, 0, this.doc.width, this.doc.height);
-    if (strokes.length) this.doc.commit(strokes.length === 1 ? strokes[0] : { type: 'strokes', strokes });
+    if (strokes.length) {
+      if (this.preGestureVersion !== null && this.preGestureVersion !== this.doc.version) {
+        // Another operation landed while the eraser preview was drawing. Rebuild the
+        // committed page, then snapshot the state the eraser will actually modify.
+        this.doc.renderAll();
+        this.preGestureState = this.doc.captureUndoState(true);
+      }
+      this.doc.commit(strokes.length === 1 ? strokes[0] : { type: 'strokes', strokes }, this.preGestureState);
+    }
+    this.preGestureState = null;
+    this.preGestureVersion = null;
   }
 
   #scheduleDraw() {

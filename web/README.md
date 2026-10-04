@@ -44,7 +44,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Inside / Free switch | Shown next to the tools while there's a picture. **Inside**: each line (pen, pencil, marker, eraser) stays in the area of the picture where it started and never crosses the picture's outlines; a line started on an outline begins in the first area it reaches. **Free**: draw anywhere (the default). Only the picture's lines are borders, not what the kid drew. Remembered per device. |
 | Languages | English, Русский, Українська, Deutsch, Français, Español and Italiano. Pick one under Settings → **Language**, or leave it on **Same as the device**, which uses the first of the device's languages the app has (English otherwise). Everything is translated: buttons, dialogs, the Log, error messages and the idea pictures in Create. Voice input listens in the chosen language. The choice is saved with the other settings and can be fixed for every device in `config.local.json` (`"language": "de"`). |
 | Settings | Choose the language, which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
-| Create | Type one sentence ("a dinosaur eating ice cream") and get a coloring page from OpenAI or Gemini. |
+| Create | Shows three pre-made coloring pages, shuffled every time it opens, and a die for three others. Tapping one puts it on the paper straight away, with no API key and no cost (see [Pre-made coloring pages](#pre-made-coloring-pages)). Or say or type one sentence ("a dinosaur eating ice cream") and get a new page from OpenAI or Gemini. |
 | Log | In Settings, **Log** shows how many coloring pages were made (in total and this month), what they cost, and every request with the child's words, the model, token counts and any error. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
@@ -68,6 +68,29 @@ Safari only allows the microphone, and the share sheet, on `https://` pages (or 
 If the address is https and voice still doesn't start, the Create dialog says why:
 - **Microphone blocked:** in Safari, tap aA → Website Settings → Microphone → Allow.
 - **Dictation turned off:** Settings → General → Keyboard → Dictation.
+
+## Pre-made coloring pages
+
+`pages/library.json` lists 20 pages that 3–4-year-olds like most (dinosaur, unicorn, puppy, kitten, butterfly, fire truck, race car, train, rocket, castle, princess, mermaid, teddy bear, elephant, lion, fish, dragon, digger, ice cream, rainbow). Each entry has:
+- `id`: names its pictures in `pages/`: `<id>-portrait.png` and `<id>-landscape.png` (the paper's shape picks one; if it's missing, the other is used), and `<id>-thumb.webp`, a small, simple emoji-like picture the tile shows.
+- `prompt`: the English sentence the picture is made from.
+- `label`: the tile's word in each language.
+- Optional: `thumbPrompt` (the thumbnail's subject, if not the English label, e.g. "a friendly green dinosaur"), `glyph` (an icon from `js/icons.js` the tile shows while there's no picture), `images` (other file names for `portrait`, `landscape` and `thumb`), and `style: "lineArt"` for black-and-white pages. Pictures are colored pages by default, like the ones Create makes, so the fill bucket knows the areas.
+
+A tile shows the thumbnail, else the page itself, else the glyph (or the wand). A page whose pictures don't exist yet still shows; tapping it fills in its word for the generator instead.
+
+To make the missing pictures, the pages with the same prompt as Create and the thumbnails with an emoji-style prompt (three per page, 60 in total):
+
+```bash
+node web/tools/make-pages.mjs                               # list what's missing
+OPENAI_API_KEY=sk-… node web/tools/make-pages.mjs --go      # make them
+node web/tools/make-pages.mjs --go --only dinosaur,unicorn  # just some
+node web/tools/make-pages.mjs --go --thumbs                 # only thumbnails (--pages: only pages)
+```
+
+Thumbnails are made at 1024×1024, the smallest size the API makes, as WebP on a transparent background, so each is small. A thumbnail drawn by hand works too: save it as `<id>-thumb.webp` (or PNG, named in `images.thumb`), ideally square and about 256×256.
+
+To add a page, add an entry to `library.json` and run the script.
 
 ## Button glyphs
 

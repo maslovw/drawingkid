@@ -119,6 +119,9 @@ const GLYPHS = {
   anywhere: `<path d="M24 42 C10 32 4 24 4 16 C4 9 9 5 15 5 C19 5 22 7 24 11 C26 7 29 5 33 5 C39 5 44 9 44 16 C44 24 38 32 24 42 Z" fill="#FFFFFF" stroke-width="3.5"/>
   <path class="ink-line" d="M2 30 L20 12 L10 40 L34 8 L26 44 L46 22" fill="none" stroke-width="3.5"/>`,
 
+  shuffle: `<rect x="6" y="6" width="36" height="36" rx="8" fill="#FFFFFF"/>
+  ${[[15, 15], [33, 15], [24, 24], [15, 33], [33, 33]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="#EE5A45" stroke="none"/>`).join('')}`,
+
   more: `<circle cx="10" cy="24" r="5.5" fill="#EE5A45"/>
   <circle cx="24" cy="24" r="5.5" fill="#FFC93C"/>
   <circle cx="38" cy="24" r="5.5" fill="#4A9BE8"/>`,

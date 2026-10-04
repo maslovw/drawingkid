@@ -173,6 +173,7 @@ const STRINGS = {
     'create.whatToDraw': "What to draw",
     'create.ideas': "Ideas",
     'create.wait': "Drawing your page…",
+    'create.shuffle': "Other ideas",
   },
 
   ru: {
@@ -336,6 +337,7 @@ const STRINGS = {
     'create.whatToDraw': "Что нарисовать",
     'create.ideas': "Идеи",
     'create.wait': "Рисую раскраску…",
+    'create.shuffle': "Другие идеи",
   },
 
   uk: {
@@ -499,6 +501,7 @@ const STRINGS = {
     'create.whatToDraw': "Що намалювати",
     'create.ideas': "Ідеї",
     'create.wait': "Малюю розмальовку…",
+    'create.shuffle': "Інші ідеї",
   },
 
   de: {
@@ -660,6 +663,7 @@ const STRINGS = {
     'create.whatToDraw': "Was soll gemalt werden",
     'create.ideas': "Ideen",
     'create.wait': "Ich male dein Bild…",
+    'create.shuffle': "Andere Ideen",
   },
 
   fr: {
@@ -821,6 +825,7 @@ const STRINGS = {
     'create.whatToDraw': "Quoi dessiner",
     'create.ideas': "Idées",
     'create.wait': "Je dessine ton coloriage…",
+    'create.shuffle': "D'autres idées",
   },
 
   es: {
@@ -982,6 +987,7 @@ const STRINGS = {
     'create.whatToDraw': "Qué dibujar",
     'create.ideas': "Ideas",
     'create.wait': "Dibujando tu página…",
+    'create.shuffle': "Otras ideas",
   },
 
   it: {
@@ -1143,6 +1149,7 @@ const STRINGS = {
     'create.whatToDraw': "Cosa disegnare",
     'create.ideas': "Idee",
     'create.wait': "Sto disegnando la tua pagina…",
+    'create.shuffle': "Altre idee",
   },
 };
 

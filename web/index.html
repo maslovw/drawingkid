@@ -22,11 +22,12 @@
 
       <nav class="group actions" aria-label="Actions" data-i18n-attr="aria-label:group.actions">
         <button id="create" class="action magic" type="button" title="Make a coloring page" data-i18n-attr="title:action.createTitle"><span class="icon" aria-hidden="true" data-icon="create"></span><span class="caption" data-i18n="action.create">Create</span></button>
-        <button id="import" class="action" type="button" title="Add a picture" data-i18n-attr="title:action.pictureTitle"><span class="icon" aria-hidden="true" data-icon="picture"></span><span class="caption" data-i18n="action.picture">Picture</span></button>
-        <button id="export" class="action" type="button" title="Save or share" data-i18n-attr="title:action.saveTitle"><span class="icon" aria-hidden="true" data-icon="save"></span><span class="caption" data-i18n="action.save">Save</span></button>
+        <button id="import" class="action in-menu" type="button" title="Add a picture" data-i18n-attr="title:action.pictureTitle"><span class="icon" aria-hidden="true" data-icon="picture"></span><span class="caption" data-i18n="action.picture">Picture</span></button>
+        <button id="export" class="action in-menu" type="button" title="Save or share" data-i18n-attr="title:action.saveTitle"><span class="icon" aria-hidden="true" data-icon="save"></span><span class="caption" data-i18n="action.save">Save</span></button>
+        <button id="more" class="action more" type="button" title="More" data-i18n-attr="title:action.more" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu"><span class="icon" aria-hidden="true" data-icon="more"></span><span class="caption" data-i18n="action.more">More</span></button>
         <span class="spacer"></span>
-        <button id="clear" class="action" type="button" title="Start over" data-i18n-attr="title:action.clearTitle"><span class="icon" aria-hidden="true" data-icon="clear"></span><span class="caption" data-i18n="action.clear">Clear</span></button>
-        <button id="settings" class="action" type="button" title="Settings (grown-ups)" data-i18n-attr="title:action.settingsTitle"><span class="icon" aria-hidden="true" data-icon="settings"></span><span class="caption" data-i18n="action.settings">Settings</span></button>
+        <button id="clear" class="action in-menu" type="button" title="Start over" data-i18n-attr="title:action.clearTitle"><span class="icon" aria-hidden="true" data-icon="clear"></span><span class="caption" data-i18n="action.clear">Clear</span></button>
+        <button id="settings" class="action in-menu" type="button" title="Settings (grown-ups)" data-i18n-attr="title:action.settingsTitle"><span class="icon" aria-hidden="true" data-icon="settings"></span><span class="caption" data-i18n="action.settings">Settings</span></button>
       </nav>
       </div>
 
@@ -40,10 +41,21 @@
 
       <div class="rail rail-start">
         <div id="tools" class="group tools" role="toolbar" aria-label="Tools" data-i18n-attr="aria-label:group.tools"></div>
-        <div id="sizes" class="group sizes" role="toolbar" aria-label="Brush size" data-i18n-attr="aria-label:group.sizes"></div>
-        <div id="palettes" class="group palettes" role="toolbar" aria-label="Color palette" data-i18n-attr="aria-label:group.palettes"></div>
+        <button id="brush" class="tool brush" type="button" title="Brush size and colors" aria-label="Brush size and colors" data-i18n-attr="title:brush.buttonTitle; aria-label:brush.buttonTitle" aria-expanded="false" aria-controls="brush-tray"><span class="brush-ring" aria-hidden="true"><span class="brush-dot"></span></span><span class="caption" data-i18n="brush.button">Brush</span></button>
+        <div id="brush-tray" class="brush-tray">
+          <div id="sizes" class="group sizes" role="toolbar" aria-label="Brush size" data-i18n-attr="aria-label:group.sizes"></div>
+          <div id="palettes" class="group palettes" role="toolbar" aria-label="Color palette" data-i18n-attr="aria-label:group.palettes"></div>
+        </div>
       </div>
       <div id="colors" class="group colors" role="toolbar" aria-label="Colors" data-i18n-attr="aria-label:group.colors"></div>
+    </div>
+
+    <div id="more-menu" class="more-menu" role="menu" aria-label="More" data-i18n-attr="aria-label:action.more" hidden>
+      <button class="menu-item" type="button" role="menuitem" data-for="import"><span class="icon" aria-hidden="true" data-icon="picture"></span><span data-i18n="action.pictureTitle">Add a picture</span></button>
+      <button class="menu-item" type="button" role="menuitem" data-for="export"><span class="icon" aria-hidden="true" data-icon="save"></span><span data-i18n="action.saveTitle">Save or share</span></button>
+      <button class="menu-item" type="button" role="menuitem" data-for="clear"><span class="icon" aria-hidden="true" data-icon="clear"></span><span data-i18n="action.clearTitle">Start over</span></button>
+      <span class="menu-sep" role="separator"></span>
+      <button class="menu-item" type="button" role="menuitem" data-for="settings"><span class="icon" aria-hidden="true" data-icon="settings"></span><span><span data-i18n="action.settings">Settings</span><span class="menu-sub" data-i18n="menu.grownUps">For grown-ups</span></span></button>
     </div>
 
     <input id="file" type="file" accept="image/*" hidden />
@@ -186,18 +198,28 @@
 
     <dialog id="create-dialog" class="confirm create">
       <form method="dialog">
-        <p class="confirm-title" data-i18n="create.title">What should we color?</p>
-        <div class="idea-row">
-          <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="A dragon having a picnic with a bunny" />
-          <button id="create-mic" class="voice-btn" type="button" title="Say it" aria-label="Say it" data-i18n-attr="title:create.sayIt; aria-label:create.sayIt" autofocus hidden><span class="icon" aria-hidden="true" data-icon="mic"></span></button>
-          <button id="create-keyboard" class="voice-btn" type="button" title="Type it" aria-label="Type it" data-i18n-attr="title:create.typeIt; aria-label:create.typeIt" hidden><span class="icon" aria-hidden="true" data-icon="keyboard"></span></button>
+        <button class="close-btn" value="cancel" aria-label="Close" title="Close" data-i18n-attr="title:common.close; aria-label:common.close"><span class="icon" aria-hidden="true" data-icon="close"></span></button>
+        <div class="create-ask">
+          <p class="confirm-title" data-i18n="create.title">What shall we color?</p>
+          <button id="create-mic" class="voice-btn mic-big" type="button" title="Say it" aria-label="Say it" data-i18n-attr="title:create.sayIt; aria-label:create.sayIt" autofocus hidden><span class="icon" aria-hidden="true" data-icon="mic"></span></button>
+          <div class="idea-row">
+            <input id="create-idea" type="text" maxlength="200" autocomplete="off" placeholder="Say it or type it" aria-label="What to draw" data-i18n-attr="aria-label:create.whatToDraw" />
+            <button id="create-keyboard" class="voice-btn" type="button" title="Type it" aria-label="Type it" data-i18n-attr="title:create.typeIt; aria-label:create.typeIt" hidden><span class="icon" aria-hidden="true" data-icon="keyboard"></span></button>
+          </div>
+          <p id="create-voice-hint" class="hint voice-hint" role="status" hidden></p>
+          <div class="idea-tiles" id="create-chips" role="group" aria-label="Ideas" data-i18n-attr="aria-label:create.ideas"></div>
+          <p id="create-status" class="create-status" role="status"></p>
+          <button id="create-go" type="button" class="go-btn"><span class="icon" aria-hidden="true" data-icon="create"></span><span data-i18n="create.go">Make it!</span></button>
         </div>
-        <p id="create-voice-hint" class="hint voice-hint" role="status" hidden></p>
-        <div class="idea-chips" id="create-chips"></div>
-        <p id="create-status" class="hint" role="status"></p>
-        <div class="confirm-actions">
-          <button id="create-go" type="button" class="primary" data-i18n="create.go">Make my page</button>
-          <button value="cancel" data-i18n="common.cancel">Cancel</button>
+        <div class="create-wait" role="status">
+          <div class="wait-art" aria-hidden="true">
+            <svg viewBox="0 0 160 150" width="160" height="150">
+              <path class="wait-line" pathLength="100" d="M80 16 L95.9 58.2 L140.9 60.2 L105.7 88.3 L117.6 131.8 L80 107 L42.4 131.8 L54.3 88.3 L19.1 60.2 L64.1 58.2 Z" />
+            </svg>
+            <span class="wait-pencil icon" data-icon="pencil"></span>
+          </div>
+          <p class="wait-title" data-i18n="create.wait">Drawing your page…</p>
+          <div class="wait-dots" aria-hidden="true"><span></span><span></span><span></span></div>
         </div>
       </form>
     </dialog>

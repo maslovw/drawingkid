@@ -1,0 +1,14 @@
+# Runs the backend on lsp. The reverse proxy on the host forwards
+# https://play.maslovw.de/api/drawingkid to 127.0.0.1:8787.
+services:
+  drawingkid:
+    build: .
+    image: drawingkid-server
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./data:/data
+      # DeviceCheck key from App Store Connect; set DEVICECHECK_KEY_PATH=/secrets/devicecheck.p8
+      - ./secrets:/secrets:ro

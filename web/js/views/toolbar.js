@@ -5,8 +5,8 @@ import { icon } from '../icons.js';
 import { t } from '../i18n.js';
 
 export class ToolbarView {
-  constructor({ tools, sizes, palettes, colors }, vm) {
-    this.els = { tools, sizes, palettes, colors };
+  constructor({ tools, sizes, palettes, colors, brush }, vm) {
+    this.els = { tools, sizes, palettes, colors, brush };
     this.vm = vm;
     vm.addEventListener('change', () => this.render());
     this.render();
@@ -28,7 +28,26 @@ export class ToolbarView {
           onClick: () => vm.setTool(tool.id),
         });
       }),
+      // Coloring mode switch, shown while there's a picture to color (the bucket always
+      // stays inside the lines, so it's hidden for Fill).
+      ...(vm.hasPicture && vm.tool !== 'fill'
+        ? [
+            button({
+              className: 'tool mode',
+              pressed: vm.inside,
+              label: t(vm.inside ? 'mode.insideLabel' : 'mode.freeLabel'),
+              html: `<span class="icon" aria-hidden="true">${icon(vm.inside ? 'inside' : 'anywhere')}</span><span class="caption">${t(vm.inside ? 'mode.inside' : 'mode.free')}</span>`,
+              onClick: () => vm.setInside(!vm.inside),
+            }),
+          ]
+        : []),
+      // The phone layout's Brush button, which opens sizes and palettes; hidden elsewhere.
+      this.els.brush,
     );
+    const size = SIZES.find((s) => s.id === vm.size) ?? SIZES[0];
+    const dot = this.els.brush.querySelector('.brush-dot');
+    dot.style.width = dot.style.height = `${Math.round(10 + (size.px / 40) * 14)}px`;
+    dot.style.background = brushColor;
 
     // Size doesn't apply to the paint bucket.
     this.els.sizes.hidden = vm.tool === 'fill';

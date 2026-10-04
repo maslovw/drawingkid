@@ -1,6 +1,8 @@
 // The drawing document: an operation log with undo/redo, rendered onto two layers
 // (background image + drawing). Ops are small vector records, so undo is exact:
-//   { type: 'stroke', tool, color, size, points, hue?, tone? }   color 'rainbow' starts at `hue`
+//   { type: 'stroke', tool, color, size, points, hue?, tone?, inside? }
+//                                    color 'rainbow' starts at `hue`; `inside` ([x, y]) keeps the
+//                                    stroke within the picture's area at that point
 //   { type: 'strokes', strokes }      several fingers drawing at once, undone together
 //   { type: 'fill', x, y, color, tone? }    color 'rainbow' fills with a rainbow across the page;
 //                                    `tone` is the palette's rainbow saturation/lightness
@@ -9,9 +11,36 @@
 // Only the last MAX_UNDO ops are kept; older ones are "baked" into a base raster.
 // Each page has its own size, chosen to fit the screen when the page is started.
 
-import { DEFAULT_SIZE, createCanvas, canvasToBlob, drawStroke, floodFill, toLineArt } from './render.js';
+import {
+  DEFAULT_SIZE,
+  createCanvas,
+  canvasToBlob,
+  drawStroke,
+  floodFill,
+  labelRegions,
+  prepareFill,
+  regionMask,
+  toLineArt,
+} from './render.js';
+import { splitColoredPage } from './colorguide.js';
 
 const MAX_UNDO = 50;
+const MAX_UNDO_SNAPSHOTS = 8;
+const MAX_UNDO_SNAPSHOT_BYTES = 64 * 1024 * 1024;
+
+// `?debug=guide` shows a colored page's area guide over it (no area: see-through), and
+// `?debug=source` shows the colored page as it came from the generator.
+const DEBUG_VIEW = new URLSearchParams(globalThis.location?.search ?? '').get('debug');
+
+// Draws an image as large as fits, centered on the canvas.
+function drawFitted(ctx, image) {
+  const { width: W, height: H } = ctx.canvas;
+  const iw = image.naturalWidth ?? image.width;
+  const ih = image.naturalHeight ?? image.height;
+  const scale = Math.min(W / iw, H / ih);
+  ctx.drawImage(image, (W - iw * scale) / 2, (H - ih * scale) / 2, iw * scale, ih * scale);
+}
+const MAX_REGION_MASKS = 64;
 
 // crypto.randomUUID only exists on HTTPS/localhost pages; getRandomValues works everywhere,
 // including the app opened over plain http:// on the home network.
@@ -52,9 +81,15 @@ export class DrawingDocument extends EventTarget {
   }
 
   // Applies an op and records it. Returns false (and records nothing) for no-op fills.
-  commit(op) {
-    if (!this.#applyLive(op)) return false;
+  commit(op, preState = null) {
+    const cacheable = this.width * this.height * 4 <= MAX_UNDO_SNAPSHOT_BYTES;
+    const state = cacheable ? (preState ?? this.captureUndoState(op.type === 'fill')) : null;
+    if (!this.#applyLive(op)) {
+      if (state) this.#releaseUndoState(state);
+      return false;
+    }
     this.ops.push(op);
+    if (state) this.#cacheUndoState(op, state);
     this.redoStack = [];
     if (this.ops.length > MAX_UNDO) this.#bake(this.ops.shift());
     this.#changed();
@@ -63,23 +98,35 @@ export class DrawingDocument extends EventTarget {
 
   undo() {
     if (!this.ops.length) return;
-    this.redoStack.push(this.ops.pop());
-    this.renderAll();
+    const op = this.ops.pop();
+    this.redoStack.push(op);
+    const state = this.undoCache.get(op);
+    this.undoCache.delete(op);
+    if (state) {
+      this.drawCtx.putImageData(state.pixels, 0, 0);
+      this.background = state.background;
+      this.#renderBackground();
+      this.#releaseUndoState(state);
+    } else this.renderAll();
     this.#changed();
   }
 
   redo() {
     const op = this.redoStack.pop();
     if (!op) return;
+    const state = this.width * this.height * 4 <= MAX_UNDO_SNAPSHOT_BYTES ? this.captureUndoState() : null;
     this.#applyLive(op);
     this.ops.push(op);
+    if (state) this.#cacheUndoState(op, state);
     this.#changed();
   }
 
   // Scales an image to fit the page (on white) and makes it the background.
-  // `lineArt` cleans it up into crisp black-and-white for coloring; `clear` starts a fresh
-  // page (in the same undo step, so one undo brings the old drawing back).
-  async importBackground(file, { lineArt = false, clear = false } = {}) {
+  // `lineArt` cleans it up into crisp black-and-white for coloring; `colored` takes a page
+  // that's already colored in, keeps only its outlines, and keeps its colors as a guide to
+  // its areas (see colorguide.js); `clear` starts a fresh page (in the same undo step, so one
+  // undo brings the old drawing back).
+  async importBackground(file, { lineArt = false, colored = false, clear = false } = {}) {
     const { width: W, height: H } = this;
     const url = URL.createObjectURL(file);
     try {
@@ -87,21 +134,64 @@ export class DrawingDocument extends EventTarget {
       img.src = url;
       await img.decode();
       const canvas = createCanvas(W, H);
-      const ctx = canvas.getContext('2d', { willReadFrequently: lineArt });
+      const ctx = canvas.getContext('2d', { willReadFrequently: lineArt || colored });
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, W, H);
-      const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight);
-      const w = img.naturalWidth * scale;
-      const h = img.naturalHeight * scale;
-      ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-      if (lineArt) toLineArt(ctx);
+      drawFitted(ctx, img);
+      let guide = null;
+      let source = null;
+      if (colored) {
+        // The colored original is kept too, so a page whose areas come out wrong can be
+        // looked at later (see DEBUG_VIEW).
+        source = { blob: file, bitmap: await createImageBitmap(file) };
+        const page = splitColoredPage(ctx.getImageData(0, 0, W, H));
+        ctx.putImageData(new ImageData(page.lineArt, W, H), 0, 0);
+        const guideCanvas = createCanvas(W, H);
+        guideCanvas.getContext('2d').putImageData(new ImageData(page.guide, W, H), 0, 0);
+        guide = { blob: await canvasToBlob(guideCanvas), bitmap: guideCanvas };
+      } else if (lineArt) {
+        toLineArt(ctx);
+      }
       const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
       const imageId = newId();
-      this.images.set(imageId, { blob, bitmap: canvas });
+      this.images.set(imageId, { blob, bitmap: canvas, guide, source });
       this.commit(clear ? { type: 'background', imageId, clear } : { type: 'background', imageId });
     } finally {
       URL.revokeObjectURL(url);
     }
+  }
+
+  // True when a picture is showing, so strokes can stay inside its lines.
+  get hasPicture() {
+    return Boolean(this.background && this.images.has(this.background));
+  }
+
+  // Where a stroke staying inside the lines is kept: the first of its points that lies in an
+  // area of the current picture (not on an outline). Null when there's no picture, or when
+  // every point is on a line.
+  insideSeed(points) {
+    const background = this.#backgroundData(this.background);
+    if (!background) return null;
+    const { labels } = this.#regions(this.background, background);
+    for (let i = 0; i < points.length; i += 2) {
+      const x = Math.floor(points[i]);
+      const y = Math.floor(points[i + 1]);
+      if (x < 0 || y < 0 || x >= this.width || y >= this.height) continue;
+      if (labels[y * this.width + x] > 0) return [x, y];
+    }
+    return null;
+  }
+
+  // Finds the current picture's areas ahead of time (it takes a moment on a big page), so
+  // the first stroke in coloring mode starts without a pause.
+  prepareInside() {
+    const background = this.#backgroundData(this.background);
+    if (background) this.#regions(this.background, background);
+  }
+
+  // The area of the current picture a stroke with this seed stays in (for the live preview).
+  insideRegion(seed) {
+    return this.#region(this.background, seed);
   }
 
   // Background + drawing flattened into one canvas (for export and AI).
@@ -113,14 +203,76 @@ export class DrawingDocument extends EventTarget {
     return canvas;
   }
 
-  // Replays base + ops from scratch (used after undo and on load).
+  // Replays base + ops from scratch, rebuilding snapshots for recent operations.
   renderAll() {
     const ctx = this.drawCtx;
+    const bytes = this.width * this.height * 4;
+    const cacheCount = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+    this.undoCache.clear();
+    if (this.undoPool) this.undoPool.free = Array.from({ length: this.undoPool.count }, (_, i) => i);
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.drawImage(this.base, 0, 0);
     this.background = this.baseBackground;
-    for (const op of this.ops) this.#apply(ctx, op, this);
+    for (let i = 0; i < this.ops.length; i++) {
+      const op = this.ops[i];
+      if (i >= this.ops.length - cacheCount) this.#cacheUndoState(op, this.captureUndoState());
+      this.#apply(ctx, op, this);
+    }
     this.#renderBackground();
+  }
+
+  // A pre-operation drawing state. Fills and eraser previews use an independent buffer
+  // until they commit, so cancelled/no-op actions leave the recent cache intact.
+  captureUndoState(independent = false) {
+    if (this.width * this.height * 4 > MAX_UNDO_SNAPSHOT_BYTES) return null;
+    const pixels = this.drawCtx.getImageData(0, 0, this.width, this.height);
+    if (independent) return { pixels, background: this.background };
+    const bytes = pixels.data.byteLength;
+    if (!this.undoPool) {
+      const count = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+      this.undoPool = { buffer: new ArrayBuffer(count * bytes), free: Array.from({ length: count }, (_, i) => i), count };
+    }
+    if (!this.undoPool.free.length) {
+      const oldest = this.undoCache.keys().next().value;
+      const oldState = this.undoCache.get(oldest);
+      this.undoCache.delete(oldest);
+      this.#releaseUndoState(oldState);
+    }
+    const slot = this.undoPool.free.pop();
+    const view = new Uint8ClampedArray(this.undoPool.buffer, slot * bytes, bytes);
+    view.set(pixels.data);
+    return { pixels: new ImageData(view, this.width, this.height), background: this.background, slot };
+  }
+
+  #releaseUndoState(state) {
+    if (state.slot !== undefined) this.undoPool.free.push(state.slot);
+  }
+
+  #cacheUndoState(op, state) {
+    const bytes = this.width * this.height * 4;
+    if (bytes > MAX_UNDO_SNAPSHOT_BYTES) return;
+    if (state.slot === undefined) {
+      if (!this.undoPool) {
+        const count = Math.min(MAX_UNDO_SNAPSHOTS, Math.floor(MAX_UNDO_SNAPSHOT_BYTES / bytes));
+        this.undoPool = { buffer: new ArrayBuffer(count * bytes), free: Array.from({ length: count }, (_, i) => i), count };
+      }
+      if (!this.undoPool.free.length) {
+        const oldest = this.undoCache.keys().next().value;
+        this.#releaseUndoState(this.undoCache.get(oldest));
+        this.undoCache.delete(oldest);
+      }
+      const slot = this.undoPool.free.pop();
+      const view = new Uint8ClampedArray(this.undoPool.buffer, slot * bytes, bytes);
+      view.set(state.pixels.data);
+      state = { pixels: new ImageData(view, this.width, this.height), background: state.background, slot };
+    }
+    this.undoCache.delete(op);
+    this.undoCache.set(op, state);
+    while (this.undoCache.size > MAX_UNDO_SNAPSHOTS || this.undoCache.size * bytes > MAX_UNDO_SNAPSHOT_BYTES) {
+      const oldest = this.undoCache.keys().next().value;
+      this.#releaseUndoState(this.undoCache.get(oldest));
+      this.undoCache.delete(oldest);
+    }
   }
 
   async serialize() {
@@ -140,6 +292,12 @@ export class DrawingDocument extends EventTarget {
       ops: this.ops,
       redo: this.redoStack,
       images: Object.fromEntries([...used].map((id) => [id, this.images.get(id).blob])),
+      guides: Object.fromEntries(
+        [...used].filter((id) => this.images.get(id).guide).map((id) => [id, this.images.get(id).guide.blob]),
+      ),
+      sources: Object.fromEntries(
+        [...used].filter((id) => this.images.get(id).source).map((id) => [id, this.images.get(id).source.blob]),
+      ),
     };
   }
 
@@ -147,7 +305,11 @@ export class DrawingDocument extends EventTarget {
     // Version 1 saves predate per-page sizes and were always 2048×1536.
     this.#reset(data.width ?? DEFAULT_SIZE.width, data.height ?? DEFAULT_SIZE.height);
     for (const [id, blob] of Object.entries(data.images ?? {})) {
-      this.images.set(id, { blob, bitmap: await createImageBitmap(blob) });
+      const guideBlob = data.guides?.[id];
+      const guide = guideBlob ? { blob: guideBlob, bitmap: await createImageBitmap(guideBlob) } : null;
+      const sourceBlob = data.sources?.[id];
+      const source = sourceBlob ? { blob: sourceBlob, bitmap: await createImageBitmap(sourceBlob) } : null;
+      this.images.set(id, { blob, bitmap: await createImageBitmap(blob), guide, source });
     }
     if (data.base) this.baseCtx.drawImage(await createImageBitmap(data.base), 0, 0);
     this.baseBlob = data.base ?? null;
@@ -173,9 +335,13 @@ export class DrawingDocument extends EventTarget {
     this.baseBlob = null; // cached PNG of `base` for saving
     this.ops = [];
     this.redoStack = [];
-    this.images = new Map(); // imageId -> { blob, bitmap }
+    this.undoCache = new Map(); // op -> { pixels, background }; never serialized
+    this.undoPool = null;
+    this.images = new Map(); // imageId -> { blob, bitmap, guide, source }; the last two are { blob, bitmap } | null
     this.background = null; // imageId currently shown
     this.bgCache = { id: null, data: null };
+    this.guideCache = { id: null, data: null };
+    this.regionCache = { id: null, regions: null, masks: new Map() };
     this.version ??= 0;
     this.dispatchEvent(new Event('resize'));
   }
@@ -190,13 +356,15 @@ export class DrawingDocument extends EventTarget {
   #apply(ctx, op, state) {
     switch (op.type) {
       case 'stroke':
-        drawStroke(ctx, op);
+        this.#drawStroke(ctx, op, state.background);
         return true;
       case 'strokes':
-        for (const stroke of op.strokes) drawStroke(ctx, stroke);
+        for (const stroke of op.strokes) this.#drawStroke(ctx, stroke, state.background);
         return true;
       case 'fill':
-        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone);
+        return floodFill(ctx, this.#backgroundData(state.background), op.x, op.y, op.color, op.tone, {
+          guide: this.#guideData(state.background),
+        });
       case 'background':
         if (op.clear) ctx.clearRect(0, 0, this.width, this.height);
         state.background = op.imageId;
@@ -208,6 +376,40 @@ export class DrawingDocument extends EventTarget {
       default:
         return false;
     }
+  }
+
+  #drawStroke(ctx, stroke, background) {
+    if (!stroke.inside) {
+      drawStroke(ctx, stroke);
+      return;
+    }
+    const region = this.#region(background, stroke.inside);
+    if (region) drawStroke(ctx, stroke, region);
+  }
+
+  // Area masks of one picture at a time, made on first use.
+  #regions(id, background) {
+    if (this.regionCache.id !== id) {
+      this.regionCache = { id, regions: labelRegions(background, this.#guideData(id)), masks: new Map() };
+    }
+    return this.regionCache.regions;
+  }
+
+  #region(id, [x, y]) {
+    const background = this.#backgroundData(id);
+    if (!background) return null;
+    const regions = this.#regions(id, background);
+    const label = regions.labels[y * this.width + x];
+    if (!(label > 0)) return null;
+    const { masks } = this.regionCache;
+    let region = masks.get(label);
+    if (region === undefined) {
+      if (masks.size >= MAX_REGION_MASKS) masks.delete(masks.keys().next().value);
+      region = regionMask(regions, background, label);
+    }
+    masks.delete(label); // most recently used last
+    masks.set(label, region);
+    return region;
   }
 
   #bake(op) {
@@ -224,6 +426,17 @@ export class DrawingDocument extends EventTarget {
     ctx.fillRect(0, 0, this.width, this.height);
     const image = this.background && this.images.get(this.background);
     if (image) ctx.drawImage(image.bitmap, 0, 0);
+    if (image?.source && DEBUG_VIEW === 'source') drawFitted(ctx, image.source.bitmap);
+    if (image?.guide && DEBUG_VIEW === 'guide') {
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(image.guide.bitmap, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    // Finding where the page's lines need closing takes a moment: do it before the first tap.
+    const id = this.background;
+    if (image) {
+      setTimeout(() => this.background === id && prepareFill(this.#backgroundData(id), this.#guideData(id)), 50);
+    }
   }
 
   #backgroundData(id) {
@@ -234,6 +447,18 @@ export class DrawingDocument extends EventTarget {
       this.bgCache = { id, data: ctx.getImageData(0, 0, this.width, this.height) };
     }
     return this.bgCache.data;
+  }
+
+  // The current picture's color guide as pixels, or null for a picture without one.
+  #guideData(id) {
+    const guide = id && this.images.get(id)?.guide;
+    if (!guide) return null;
+    if (this.guideCache.id !== id) {
+      const ctx = createCanvas(this.width, this.height).getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(guide.bitmap, 0, 0);
+      this.guideCache = { id, data: ctx.getImageData(0, 0, this.width, this.height) };
+    }
+    return this.guideCache.data;
   }
 
   #changed() {

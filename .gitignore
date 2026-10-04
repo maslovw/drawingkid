@@ -116,3 +116,6 @@ Temporary Items
 # Drawing Kid: per-household settings and API keys (see web/README.md)
 web/config.local.json
 web/*.pem
+
+# Scratch output (prompt experiments, test images)
+.tmp/

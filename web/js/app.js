@@ -36,7 +36,7 @@ applyTranslations();
 
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
-new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
+new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors'), brush: $('brush') }, vm);
 const settings = new SettingsView($('settings-dialog'), vm);
 const parentGate = new ParentGate($('gate-dialog'));
 const log = new LogView($('log-dialog'));
@@ -120,19 +120,49 @@ function toast(message, ms = 2500) {
 
 // --- Action buttons ------------------------------------------------------
 
+let undoBusy = false;
 function syncActions() {
-  $('undo').disabled = !doc.canUndo;
+  $('undo').disabled = undoBusy || !doc.canUndo;
   $('redo').disabled = !doc.canRedo;
   $('create').hidden = !vm.config.enableImageGen;
 }
 
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+async function performUndo() {
+  if (undoBusy || !doc.canUndo) return;
+  undoBusy = true;
+  syncActions();
+  try {
+    // Let the disabled state paint before a deep replay blocks the main thread.
+    await nextFrame();
+    await nextFrame();
+    doc.undo();
+    // Keep it disabled until the restored drawing has reached a painted frame.
+    await nextFrame();
+    await nextFrame();
+  } finally {
+    undoBusy = false;
+    syncActions();
+  }
+}
+
 doc.addEventListener('change', () => {
+  vm.setHasPicture(doc.hasPicture);
   syncActions();
   scheduleSave();
 });
 vm.addEventListener('change', syncActions);
 
-$('undo').addEventListener('click', () => doc.undo());
+// Coloring mode needs the picture's areas; find them before the first stroke.
+let prepareTimer;
+function prepareInside() {
+  clearTimeout(prepareTimer);
+  if (vm.inside && doc.hasPicture) prepareTimer = setTimeout(() => doc.prepareInside(), 300);
+}
+doc.addEventListener('change', prepareInside);
+vm.addEventListener('change', prepareInside);
+
+$('undo').addEventListener('click', performUndo);
 $('redo').addEventListener('click', () => doc.redo());
 $('settings').addEventListener('click', async () => {
   if (await parentGate.ask()) settings.open();
@@ -150,24 +180,113 @@ $('file').addEventListener('change', async (e) => {
   }
 });
 
+// --- Phone popovers --------------------------------------------------------
+// On a phone the brush sizes and palettes, and the less used actions, sit in popovers
+// opened from the Brush and More buttons. Elsewhere those buttons are hidden by CSS.
+
+const popovers = [
+  { anchor: $('brush'), el: $('brush-tray'), show: (el, on) => el.classList.toggle('open', on) },
+  { anchor: $('more'), el: $('more-menu'), show: (el, on) => (el.hidden = !on) },
+];
+
+function isOpen(p) {
+  return p.anchor.getAttribute('aria-expanded') === 'true';
+}
+
+function setOpen(p, on) {
+  p.show(p.el, on);
+  p.anchor.setAttribute('aria-expanded', String(on));
+  if (on) placePopover(p.el, p.anchor);
+}
+
+function closePopovers() {
+  for (const p of popovers) if (isOpen(p)) setOpen(p, false);
+}
+
+// Beside the anchor in landscape (towards the paper), above or below it in portrait.
+function placePopover(el, anchor) {
+  const a = anchor.getBoundingClientRect();
+  const p = el.getBoundingClientRect();
+  const gap = 10;
+  const edge = 8;
+  const clamp = (v, max) => Math.min(Math.max(v, edge), max - edge);
+  let left, top;
+  if (innerWidth > innerHeight) {
+    left = a.left + a.width / 2 < innerWidth / 2 ? a.right + gap : a.left - gap - p.width;
+    top = clamp(a.top + a.height / 2 - p.height / 2, innerHeight - p.height);
+  } else {
+    left = clamp(a.left + a.width / 2 - p.width / 2, innerWidth - p.width);
+    top = a.top + a.height / 2 < innerHeight / 2 ? a.bottom + gap : a.top - gap - p.height;
+  }
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+}
+
+for (const p of popovers) {
+  p.anchor.addEventListener('click', () => {
+    const on = !isOpen(p);
+    closePopovers();
+    setOpen(p, on);
+  });
+}
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    for (const p of popovers) if (isOpen(p) && !p.el.contains(e.target) && !p.anchor.contains(e.target)) setOpen(p, false);
+  },
+  true,
+);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePopovers();
+});
+addEventListener('resize', closePopovers);
+
+for (const item of $('more-menu').querySelectorAll('[data-for]')) {
+  item.addEventListener('click', () => {
+    closePopovers();
+    $(item.dataset.for).click();
+  });
+}
+
 // --- Coloring page generator --------------------------------------------
 
+// Idea pictures read without words: tapping one fills in its sentence. Labels and
+// sentences come from the translations, in this order.
+const IDEA_GLYPHS = ['dino', 'rocket', 'castle', 'fish'];
 let generation = null; // AbortController while a page is being made
+let ideaTexts = [];
 
 function buildIdeaChips() {
+  const tiles = t('create.ideaTiles');
+  ideaTexts = tiles.map(([, text]) => text);
   $('create-chips').replaceChildren(
-    ...t('create.ideas').map((idea) => {
+    ...IDEA_GLYPHS.map((glyph, i) => {
+      const [label, text] = tiles[i];
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = idea;
+      b.className = 'idea-tile';
+      b.setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-label', text);
+      b.innerHTML = `<span class="icon" aria-hidden="true">${icon(glyph)}</span><span class="caption"></span>`;
+      b.querySelector('.caption').textContent = label;
       b.addEventListener('click', () => {
         voice.stop();
-        $('create-idea').value = idea;
+        $('create-idea').value = text;
+        syncIdeaTiles();
       });
       return b;
     }),
   );
+  syncIdeaTiles();
 }
+
+function syncIdeaTiles() {
+  const value = $('create-idea').value;
+  $('create-chips')
+    .querySelectorAll('.idea-tile')
+    .forEach((b, i) => b.setAttribute('aria-pressed', String(ideaTexts[i] === value)));
+}
+$('create-idea').addEventListener('input', syncIdeaTiles);
 buildIdeaChips();
 
 $('create').addEventListener('click', () => {
@@ -175,6 +294,7 @@ $('create').addEventListener('click', () => {
   $('create-status').textContent = loadApiKeys()[imageProvider]
     ? ''
     : t('create.needKey', { name: PROVIDERS[imageProvider].label });
+  syncIdeaTiles();
   $('create-dialog').showModal();
   voice.start(); // listen straight away; the keyboard button is there for typing
 });
@@ -199,7 +319,7 @@ $('create-go').addEventListener('click', async () => {
   generation = new AbortController();
   dialog.setAttribute('aria-busy', 'true');
   $('create-go').disabled = true;
-  $('create-status').textContent = t('create.working');
+  $('create-status').textContent = ''; // the drawing animation shows it's working
   try {
     const model = imageModels[provider];
     let result;
@@ -224,15 +344,16 @@ $('create-go').addEventListener('click', async () => {
       usage: result.usage,
       costUsd: estimateCost(model, result.usage),
     });
-    await doc.importBackground(result.blob, { lineArt: true, clear: true });
+    await doc.importBackground(result.blob, { colored: true, clear: true });
     dialog.close();
     $('create-idea').value = '';
+    syncIdeaTiles();
     vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
     toast(t('toast.pageReady'));
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error(error);
-      $('create-status').textContent = error.message || t('create.failed');
+      $('create-status').textContent = t('create.oops', { message: error.message || t('create.failed') });
     }
   } finally {
     generation = null;
@@ -292,7 +413,7 @@ document.addEventListener('keydown', (e) => {
   const key = e.key.toLowerCase();
   if (key === 'z') {
     e.preventDefault();
-    e.shiftKey ? doc.redo() : doc.undo();
+    e.shiftKey ? doc.redo() : performUndo();
   } else if (key === 'y') {
     e.preventDefault();
     doc.redo();

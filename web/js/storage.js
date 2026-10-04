@@ -6,20 +6,53 @@ const STORE = 'documents';
 const PAGES = 'pages'; // { id, createdAt, text, blob, thumb }
 const CURRENT_KEY = 'current';
 
+const BLOCKED_TIMEOUT = 3000;
+
 let dbPromise;
 
 function openDb() {
-  dbPromise ??= new Promise((resolve, reject) => {
+  if (dbPromise) return dbPromise;
+  const promise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 2);
+    let timer;
+    let gaveUp = false;
     request.onupgradeneeded = (e) => {
       const db = request.result;
       if (e.oldVersion < 1) db.createObjectStore(STORE);
       if (e.oldVersion < 2) db.createObjectStore(PAGES, { keyPath: 'id', autoIncrement: true });
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    // Another tab or home-screen instance still has an older version open. Wait a bit
+    // for it to close, then fail so callers fall back instead of hanging forever.
+    request.onblocked = () => {
+      console.warn('Storage upgrade is blocked by another open copy of the app');
+      timer ??= setTimeout(() => {
+        gaveUp = true;
+        reject(new Error('Storage is blocked by another open copy of the app'));
+      }, BLOCKED_TIMEOUT);
+    };
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      const db = request.result;
+      // Too late, a later call opens its own connection.
+      if (gaveUp) return db.close();
+      // Step aside for a newer version opened elsewhere; the next call reopens.
+      db.onversionchange = db.onclose = () => {
+        db.close();
+        if (dbPromise === promise) dbPromise = undefined;
+      };
+      resolve(db);
+    };
+    request.onerror = () => {
+      clearTimeout(timer);
+      reject(request.error);
+    };
   });
-  return dbPromise;
+  // Don't keep a failed open around, so the next call tries again.
+  promise.catch(() => {
+    if (dbPromise === promise) dbPromise = undefined;
+  });
+  dbPromise = promise;
+  return promise;
 }
 
 async function run(mode, fn, storeName = STORE) {

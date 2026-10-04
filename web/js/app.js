@@ -262,6 +262,7 @@ const TILE_COUNT = 3;
 let generation = null; // AbortController while a page is being made or loaded
 let ideaTexts = []; // the words each tile fills in, to show which one is picked
 let shownPages = [];
+let pendingTile = null; // the library tile waiting to learn whether its page exists
 
 function tileButton(glyph, label, onClick) {
   const b = document.createElement('button');
@@ -291,8 +292,21 @@ function libraryTile(page) {
   img.alt = '';
   img.decoding = 'async';
   let tried = 0;
-  let url = null;
-  const b = tileButton(page.glyph ?? 'create', label, () => (url ? usePremadePage(page, url) : fillIdea(label)));
+  // Looked up straight away; a tap before the answer comes waits for it rather than
+  // filling in the words, so a slow network doesn't make the kid pay for a page we have.
+  const lookup = findPage(page, landscape);
+  const b = tileButton(page.glyph ?? 'create', label, async () => {
+    if (pendingTile === b) return; // a second tap while this one waits
+    pendingTile = b;
+    voice.stop(); // so speech doesn't fill in other words meanwhile
+    const url = await lookup;
+    // Skip it if another tile was tapped since, a page is already on its way, or the
+    // dialog closed or got new tiles while waiting.
+    if (pendingTile !== b) return;
+    pendingTile = null;
+    if (generation || !b.isConnected || !$('create-dialog').open) return;
+    url ? usePremadePage(page, url) : fillIdea(label);
+  });
   b.setAttribute('aria-label', label);
   img.addEventListener('load', () => {
     b.classList.add('has-picture');
@@ -303,7 +317,6 @@ function libraryTile(page) {
   });
   img.src = sources[0];
   b.prepend(img);
-  findPage(page, landscape).then((found) => (url = found));
   return b;
 }
 
@@ -511,9 +524,12 @@ document.addEventListener('keydown', (e) => {
 // --- Autosave ------------------------------------------------------------
 
 let saveTimer;
+// False until the saved drawing is read back; until then a blank page must not overwrite it.
+let restored = false;
 function scheduleSave(delay = 800) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
+    if (!restored && doc.isBlank) return;
     try {
       await saveDrawing(await doc.serialize());
     } catch (error) {
@@ -528,6 +544,7 @@ document.addEventListener('visibilitychange', () => {
 try {
   const saved = await loadDrawing();
   if (saved) await doc.restore(saved);
+  restored = true;
 } catch (error) {
   console.warn('Could not restore the last drawing', error);
 }

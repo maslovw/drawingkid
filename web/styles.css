@@ -1542,3 +1542,143 @@ dialog {
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
 }
+
+/* ---- Gallery: every coloring page, full screen ---- */
+
+dialog.gallery {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) calc(env(safe-area-inset-right, 0px) + 16px)
+    calc(env(safe-area-inset-bottom, 0px) + 16px) calc(env(safe-area-inset-left, 0px) + 16px);
+  border-radius: 0;
+  background: var(--bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.gallery-header {
+  position: sticky;
+  top: calc(-12px - env(safe-area-inset-top, 0px));
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -12px -16px 0;
+  padding: 12px 16px;
+  background: var(--bg);
+}
+
+.gallery-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.gallery-header .close-btn {
+  position: static;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.gallery h3 {
+  margin: 16px 0 10px;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery-item {
+  position: relative;
+}
+
+.gallery-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: 3px solid transparent;
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.gallery-tile img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.gallery-tile img.emoji {
+  object-fit: contain;
+  padding: 12%;
+  background: #f7f4ef;
+}
+
+.gallery-tile .caption {
+  overflow: hidden;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.gallery-tile[aria-busy='true'] {
+  border-color: var(--accent);
+  animation: gallery-loading 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes gallery-loading {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-tile[aria-busy='true'] {
+    animation: none;
+  }
+}
+
+.gallery-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.gallery-delete .glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.gallery-empty {
+  margin: 48px auto;
+  max-width: 32ch;
+  text-align: center;
+  font-size: 1.2rem;
+  color: var(--muted);
+}

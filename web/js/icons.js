@@ -122,6 +122,12 @@ const GLYPHS = {
   shuffle: `<rect x="6" y="6" width="36" height="36" rx="8" fill="#FFFFFF"/>
   ${[[15, 15], [33, 15], [24, 24], [15, 33], [33, 33]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.6" fill="#EE5A45" stroke="none"/>`).join('')}`,
 
+  gallery: `<rect x="9" y="5" width="32" height="26" rx="3" fill="#FFC93C" transform="rotate(-8 25 18)"/>
+  <rect x="5" y="15" width="34" height="27" rx="3" fill="#FFFFFF"/>
+  <rect x="9" y="19" width="26" height="19" rx="1.5" fill="#BFE3FF" stroke-width="2"/>
+  <path d="M9 38 L9 33 Q15 27 21 32 Q27 28 35 33 L35 38 Z" fill="#4CB872" stroke-width="2"/>
+  <circle cx="28" cy="24.5" r="3" fill="#EE5A45" stroke-width="2"/>`,
+
   more: `<circle cx="10" cy="24" r="5.5" fill="#EE5A45"/>
   <circle cx="24" cy="24" r="5.5" fill="#FFC93C"/>
   <circle cx="38" cy="24" r="5.5" fill="#4A9BE8"/>`,

@@ -8,7 +8,7 @@ import { fetchPage, findPage, loadLibrary, pageImages, pageLabel, pageThumb, pic
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
-import { loadDrawing, saveDrawing } from './storage.js';
+import { addPage, loadDrawing, saveDrawing } from './storage.js';
 import { PROVIDERS, generateColoringPage, loadApiKeys, setManagedApiKeys } from './imagegen.js';
 import { recordRequest, estimateCost } from './usagelog.js';
 import { LogView } from './views/log.js';
@@ -16,6 +16,7 @@ import { ToolbarView } from './views/toolbar.js';
 import { SettingsView } from './views/settings.js';
 import { ParentGate } from './views/parentgate.js';
 import { VoiceInput } from './views/voiceinput.js';
+import { GalleryView, makeThumb } from './views/gallery.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -353,6 +354,13 @@ $('create').addEventListener('click', () => {
   voice.start(); // listen straight away; the keyboard button is there for typing
 });
 
+// Puts a coloring page on the paper, replacing the drawing (undoable), ready to fill.
+async function putPage({ blob, options }) {
+  await doc.importBackground(blob, { ...options, clear: true });
+  vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
+  toast(t('toast.pageReady'));
+}
+
 // Shows the drawing animation while `load` fetches or generates a page, then puts the
 // page on the paper. `load` gets an AbortSignal and returns { blob, options }.
 async function makePage(load) {
@@ -364,13 +372,10 @@ async function makePage(load) {
   $('create-go').disabled = true;
   $('create-status').textContent = ''; // the drawing animation shows it's working
   try {
-    const { blob, options } = await load(generation.signal);
-    await doc.importBackground(blob, { ...options, clear: true });
+    await putPage(await load(generation.signal));
     dialog.close();
     $('create-idea').value = '';
     syncIdeaTiles();
-    vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
-    toast(t('toast.pageReady'));
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error(error);
@@ -420,9 +425,30 @@ $('create-go').addEventListener('click', () => {
       throw error;
     }
     recordRequest({ text: idea, provider, model, ok: true, usage: result.usage, costUsd: estimateCost(model, result.usage) });
+    // Kept for the gallery, so the kid can color it again later.
+    makeThumb(result.blob)
+      .then((thumb) => addPage({ text: idea, blob: result.blob, thumb }))
+      .catch((error) => console.warn('Could not keep the page for the gallery', error));
     return { blob: result.blob, options: { colored: true } };
   });
 });
+
+// --- Gallery -------------------------------------------------------------
+
+const gallery = new GalleryView($('gallery-dialog'), {
+  library,
+  landscape: () => doc.width >= doc.height,
+  onPick: async (page) => {
+    try {
+      await putPage(page);
+    } catch (error) {
+      toast(t('create.oops', { message: error.message || t('create.failed') }));
+      throw error;
+    }
+  },
+  confirmDelete: () => parentGate.ask(),
+});
+$('gallery').addEventListener('click', () => gallery.open());
 
 $('create-dialog').addEventListener('close', () => {
   voice.stop();

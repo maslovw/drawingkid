@@ -22,6 +22,7 @@
 
       <nav class="group actions" aria-label="Actions" data-i18n-attr="aria-label:group.actions">
         <button id="create" class="action magic" type="button" title="Make a coloring page" data-i18n-attr="title:action.createTitle"><span class="icon" aria-hidden="true" data-icon="create"></span><span class="caption" data-i18n="action.create">Create</span></button>
+        <button id="gallery" class="action in-menu" type="button" title="All coloring pages" data-i18n-attr="title:action.galleryTitle"><span class="icon" aria-hidden="true" data-icon="gallery"></span><span class="caption" data-i18n="action.gallery">Gallery</span></button>
         <button id="import" class="action in-menu" type="button" title="Add a picture" data-i18n-attr="title:action.pictureTitle"><span class="icon" aria-hidden="true" data-icon="picture"></span><span class="caption" data-i18n="action.picture">Picture</span></button>
         <button id="export" class="action in-menu" type="button" title="Save or share" data-i18n-attr="title:action.saveTitle"><span class="icon" aria-hidden="true" data-icon="save"></span><span class="caption" data-i18n="action.save">Save</span></button>
         <button id="more" class="action more" type="button" title="More" data-i18n-attr="title:action.more" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu"><span class="icon" aria-hidden="true" data-icon="more"></span><span class="caption" data-i18n="action.more">More</span></button>
@@ -51,6 +52,7 @@
     </div>
 
     <div id="more-menu" class="more-menu" role="menu" aria-label="More" data-i18n-attr="aria-label:action.more" hidden>
+      <button class="menu-item" type="button" role="menuitem" data-for="gallery"><span class="icon" aria-hidden="true" data-icon="gallery"></span><span data-i18n="action.gallery">Gallery</span></button>
       <button class="menu-item" type="button" role="menuitem" data-for="import"><span class="icon" aria-hidden="true" data-icon="picture"></span><span data-i18n="action.pictureTitle">Add a picture</span></button>
       <button class="menu-item" type="button" role="menuitem" data-for="export"><span class="icon" aria-hidden="true" data-icon="save"></span><span data-i18n="action.saveTitle">Save or share</span></button>
       <button class="menu-item" type="button" role="menuitem" data-for="clear"><span class="icon" aria-hidden="true" data-icon="clear"></span><span data-i18n="action.clearTitle">Start over</span></button>
@@ -194,6 +196,22 @@
           <button id="gate-cancel" type="button" data-i18n="common.cancel">Cancel</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog id="gallery-dialog" class="gallery" aria-labelledby="gallery-heading">
+      <header class="gallery-header">
+        <h2 id="gallery-heading" data-i18n="gallery.title">Coloring pages</h2>
+        <button class="close-btn gallery-close" type="button" aria-label="Close" title="Close" data-i18n-attr="title:common.close; aria-label:common.close"><span class="icon" aria-hidden="true" data-icon="close"></span></button>
+      </header>
+      <section id="gallery-mine-section" hidden>
+        <h3 data-i18n="gallery.mine">Made by me</h3>
+        <ul id="gallery-mine" class="gallery-grid"></ul>
+      </section>
+      <section id="gallery-premade-section" hidden>
+        <h3 data-i18n="gallery.premade">Ready to color</h3>
+        <ul id="gallery-premade" class="gallery-grid"></ul>
+      </section>
+      <p id="gallery-empty" class="gallery-empty" data-i18n="gallery.empty" hidden>No coloring pages yet. Tap Create to make one!</p>
     </dialog>
 
     <dialog id="create-dialog" class="confirm create">

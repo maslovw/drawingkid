@@ -21,7 +21,7 @@ export class VoiceInput {
     this.mic = mic;
     this.keyboard = keyboard;
     this.hint = hint;
-    this.recognition = null; // one recognizer, reused: iPad Safari hears nothing on a second new one
+    this.recognition = null; // a new one for every session
     this.listening = false; // what the kid sees
     this.reason = null;
     this.available = Boolean(Recognition);
@@ -45,6 +45,7 @@ export class VoiceInput {
   #active = false; // between recognition.start() and its 'end'
   #stopTimer = null;
   #afterEnd = null; // a start waiting for the previous session to let go of the microphone
+  #audio = null; // see #holdAudioSession
 
   #create() {
     const recognition = new Recognition();
@@ -57,6 +58,9 @@ export class VoiceInput {
     }
     recognition.addEventListener('result', (e) => {
       if (this.recognition !== recognition || !this.listening) return;
+      // A stopped session still delivers its last words, possibly after the kid has
+      // reopened. They belong to the old phrase and must not cancel the waiting restart.
+      if (this.#afterEnd) return;
       const last = e.results[e.results.length - 1];
       console.debug('[voice] result', last?.isFinal ? 'final' : 'interim');
       this.input.value = Array.from(e.results, (r) => r[0].transcript).join('');
@@ -81,9 +85,10 @@ export class VoiceInput {
       if (this.recognition !== recognition) return;
       this.#active = false;
       clearTimeout(this.#stopTimer);
+      const awake = this.#wakeAudioSession();
       const next = this.#afterEnd;
       this.#afterEnd = null;
-      if (next) next();
+      if (next) awake.then(next);
       else {
         this.listening = false;
         this.#sync();
@@ -96,7 +101,7 @@ export class VoiceInput {
   start() {
     if (!this.available || this.listening) return;
     if (this.reason === 'network' || this.reason === 'mic-busy') this.reason = null; // try again
-    this.recognition ??= this.#create();
+    this.#holdAudioSession();
     this.listening = true;
     this.#sync();
     if (!this.#active) return this.#begin();
@@ -108,23 +113,14 @@ export class VoiceInput {
 
   #begin() {
     if (!this.listening) return; // stopped while waiting
-    // The recognizer is reused, so pick up a language changed in Settings since it was made.
-    this.recognition.lang = speechLocale();
+    this.recognition = this.#create();
     try {
       this.recognition.start();
     } catch (error) {
-      // Still busy with a session that never ended: start over with a fresh recognizer.
       console.warn('Speech recognition failed to start', error);
-      this.#abort();
-      this.recognition = this.#create();
-      try {
-        this.recognition.start();
-      } catch (retryError) {
-        console.warn('Speech recognition failed to start again', retryError);
-        this.listening = false;
-        this.#sync();
-        return;
-      }
+      this.listening = false;
+      this.#sync();
+      return;
     }
     this.#active = true;
     console.debug('[voice] started');
@@ -156,11 +152,18 @@ export class VoiceInput {
       clearTimeout(this.#stopTimer);
       this.#stopTimer = setTimeout(() => {
         if (!this.#active) return;
-        // Safari never delivered `end`. Retire this recognizer before aborting
-        // so a late event cannot restart a session that has lost its microphone.
-        const waiting = Boolean(this.#afterEnd);
-        this.#afterEnd = null;
+        // Safari never delivered `end`. Treat the session as over either way, so the
+        // next start doesn't wait for an `end` that won't come.
         this.#active = false;
+        if (!this.#afterEnd) {
+          // Nobody is waiting: just turn the mic off.
+          this.#abort();
+          this.#wakeAudioSession();
+          return;
+        }
+        // A restart is waiting on a recognizer that is truly stuck. Retire it before
+        // aborting so a late event cannot restart a session that has lost its microphone.
+        this.#afterEnd = null;
         const stalled = this.recognition;
         this.recognition = null;
         try {
@@ -168,13 +171,44 @@ export class VoiceInput {
         } catch (error) {
           console.warn('Speech recognition failed to abort', error);
         }
-        if (waiting) {
-          this.listening = false;
-          this.#showReason('mic-busy');
-        }
+        this.#wakeAudioSession();
+        this.listening = false;
+        this.#showReason('mic-busy');
       }, 3000);
     }
     this.#sync();
+  }
+
+  // iOS 27 Safari switches its audio session off when a speech session ends and never
+  // back on, so every later session in the tab hears silence, even after a reload
+  // (WebKit bug 326069). Tested on an iPad: a silent audio graph that keeps running, plus
+  // an empty utterance after each session, keeps the microphone working. Neither alone
+  // does, and nothing revives a tab that has already gone deaf, so this has to start
+  // with the first session. Created in the tap that starts listening, so it may play.
+  #holdAudioSession() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!this.#audio) {
+      this.#audio = new AudioContext();
+      const silence = this.#audio.createGain();
+      silence.gain.value = 0;
+      const source = this.#audio.createConstantSource();
+      source.connect(silence).connect(this.#audio.destination);
+      source.start();
+    }
+    this.#audio.resume().catch((error) => console.warn('Audio session hold failed', error));
+  }
+
+  // Resolves once the utterance is done (or after half a second), for a restart to wait on.
+  #wakeAudioSession() {
+    const { speechSynthesis, SpeechSynthesisUtterance } = window;
+    if (!speechSynthesis || !SpeechSynthesisUtterance) return Promise.resolve();
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(' ');
+      utterance.onend = utterance.onerror = resolve;
+      setTimeout(resolve, 500);
+      speechSynthesis.speak(utterance);
+    });
   }
 
   #abort() {

@@ -201,8 +201,20 @@ button:focus-visible {
 
 .action .caption,
 .tool .caption {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.68rem;
   color: var(--muted);
+}
+
+/* Russian and Ukrainian button words (Карандаш, Сохранить, Створити) are long; set them a little smaller. */
+html:lang(ru) .action .caption,
+html:lang(ru) .tool .caption,
+html:lang(uk) .action .caption,
+html:lang(uk) .tool .caption {
+  font-size: 0.56rem;
 }
 
 /* Picture-only buttons for kids who don't read yet. The caption stays in the page
@@ -368,7 +380,7 @@ dialog::backdrop {
 
 .choice-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
 }
 
@@ -394,6 +406,9 @@ dialog::backdrop {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  hyphens: auto; /* long color names in some languages (Помаранчевий) */
+  overflow-wrap: anywhere;
 }
 
 .choice .icon {

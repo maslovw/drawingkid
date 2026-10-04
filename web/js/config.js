@@ -1,31 +1,33 @@
 // Tools, colors, sizes and the persisted AppConfig (which of them are visible).
+// Their names are in i18n.js: tool.<id>, color.<id>, palette.<id>, size.<id>.
 
 import { PROVIDERS } from './imagegen.js';
+import { LANGUAGES } from './i18n.js';
 
 export const TOOLS = [
-  { id: 'pen', label: 'Pen' },
-  { id: 'pencil', label: 'Pencil' },
-  { id: 'marker', label: 'Marker' },
-  { id: 'fill', label: 'Fill' },
-  { id: 'eraser', label: 'Eraser' },
+  { id: 'pen' },
+  { id: 'pencil' },
+  { id: 'marker' },
+  { id: 'fill' },
+  { id: 'eraser' },
 ];
 
 // Color slots. Each palette fills the same slots, so the Settings choice of which colors
 // to show applies to every palette.
 export const COLORS = [
-  { id: 'black', label: 'Black' },
-  { id: 'red', label: 'Red' },
-  { id: 'orange', label: 'Orange' },
-  { id: 'yellow', label: 'Yellow' },
-  { id: 'green', label: 'Green' },
-  { id: 'blue', label: 'Blue' },
-  { id: 'purple', label: 'Purple' },
-  { id: 'pink', label: 'Pink' },
-  { id: 'brown', label: 'Brown' },
-  { id: 'white', label: 'White' },
+  { id: 'black' },
+  { id: 'red' },
+  { id: 'orange' },
+  { id: 'yellow' },
+  { id: 'green' },
+  { id: 'blue' },
+  { id: 'purple' },
+  { id: 'pink' },
+  { id: 'brown' },
+  { id: 'white' },
   // Special colors, resolved per stroke rather than being a fixed color.
-  { id: 'rainbow', label: 'Rainbow', special: true },
-  { id: 'random', label: 'Surprise color', special: true },
+  { id: 'rainbow', special: true },
+  { id: 'random', special: true },
 ];
 
 // `tone` is the saturation/lightness (%) of that palette's Rainbow; `preview` is the four
@@ -33,7 +35,6 @@ export const COLORS = [
 export const PALETTES = [
   {
     id: 'classic',
-    label: 'Classic colors',
     tone: { s: 85, l: 52 },
     preview: ['red', 'yellow', 'blue', 'green'],
     colors: {
@@ -43,7 +44,6 @@ export const PALETTES = [
   },
   {
     id: 'vibrant',
-    label: 'Vibrant colors',
     tone: { s: 100, l: 50 },
     preview: ['pink', 'green', 'purple', 'yellow'],
     colors: {
@@ -53,7 +53,6 @@ export const PALETTES = [
   },
   {
     id: 'pastel',
-    label: 'Pastel colors',
     tone: { s: 80, l: 80 },
     preview: ['pink', 'yellow', 'blue', 'green'],
     colors: {
@@ -104,12 +103,13 @@ export function surpriseColor(previous, paletteId) {
 
 // Brush sizes in canvas pixels (the canvas is 2048×1536).
 export const SIZES = [
-  { id: 'small', label: 'Small', px: 8 },
-  { id: 'medium', label: 'Medium', px: 18 },
-  { id: 'large', label: 'Large', px: 40 },
+  { id: 'small', px: 8 },
+  { id: 'medium', px: 18 },
+  { id: 'large', px: 40 },
 ];
 
 export const DEFAULT_CONFIG = Object.freeze({
+  language: 'auto', // 'auto' follows the device; otherwise a LANGUAGES id
   visibleTools: TOOLS.map((t) => t.id),
   visibleColors: COLORS.map((c) => c.id),
   defaultSize: 'medium',
@@ -193,6 +193,7 @@ export function normalizeConfig(config) {
     return list.length ? list : fallback;
   };
   return {
+    language: LANGUAGES.some((l) => l.id === config.language) ? config.language : 'auto',
     visibleTools: pick(TOOLS, config.visibleTools, DEFAULT_CONFIG.visibleTools),
     visibleColors: pick(COLORS, config.visibleColors, DEFAULT_CONFIG.visibleColors),
     defaultSize: SIZES.some((s) => s.id === config.defaultSize) ? config.defaultSize : DEFAULT_CONFIG.defaultSize,

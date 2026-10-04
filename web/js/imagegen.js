@@ -1,6 +1,8 @@
 // Coloring-page generation from one sentence, via OpenAI (GPT Image) or Google Gemini
 // ("Nano Banana"). Calls go straight from the browser with the parent's own API key.
 
+import { t } from './i18n.js';
+
 export const PROVIDERS = {
   openai: {
     label: 'OpenAI',
@@ -68,16 +70,16 @@ export function knownModels(provider) {
 
 // Asks the provider which image models this key can use, newest first, and caches them.
 export async function refreshModels(provider, apiKey) {
-  if (!apiKey) throw new ImageGenError('Add an API key first.');
+  if (!apiKey) throw new ImageGenError(t('error.addKey'));
   const name = PROVIDERS[provider].label;
   let models;
   try {
     models = provider === 'openai' ? await listOpenAIModels(apiKey) : await listGeminiModels(apiKey);
   } catch (error) {
     if (error instanceof ImageGenError) throw error;
-    throw new ImageGenError(`Couldn't reach ${name}. Check the internet connection.`);
+    throw new ImageGenError(t('error.unreachable', { name }));
   }
-  if (!models.length) throw new ImageGenError(`${name} didn't list any image models for this key.`);
+  if (!models.length) throw new ImageGenError(t('error.noModels', { name }));
   try {
     const all = JSON.parse(localStorage.getItem(MODELS_STORAGE)) ?? {};
     all[provider] = models;
@@ -115,7 +117,7 @@ async function listGeminiModels(apiKey) {
 async function getJson(url, headers, name) {
   const response = await fetch(url, { headers });
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new ImageGenError(`${name} said: ${body?.error?.message ?? `HTTP ${response.status}`}`);
+  if (!response.ok) throw new ImageGenError(t('error.said', { name, detail: body?.error?.message ?? `HTTP ${response.status}` }));
   return body ?? {};
 }
 
@@ -148,7 +150,7 @@ function geminiRatio(aspect) {
 }
 
 export async function generateColoringPage({ provider, model, apiKey, idea, aspect = 4 / 3, signal }) {
-  if (!apiKey) throw new ImageGenError('Add an API key in Settings first.');
+  if (!apiKey) throw new ImageGenError(t('error.addKeySettings'));
   const prompt = coloringPrompt(idea);
   const name = PROVIDERS[provider].label;
   let response;
@@ -174,18 +176,16 @@ export async function generateColoringPage({ provider, model, apiKey, idea, aspe
         );
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new ImageGenError(
-      `Couldn't reach ${name}. Check the internet connection. (The copy hosted on claude.ai can't call outside services; run the app from your own site for this feature.)`,
-    );
+    throw new ImageGenError(`${t('error.unreachable', { name })} ${t('error.hosted')}`);
   }
 
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const detail = body?.error?.message ?? `HTTP ${response.status}`;
-    throw new ImageGenError(`${name} said: ${detail}`);
+    throw new ImageGenError(t('error.said', { name, detail }));
   }
   const b64 = provider === 'openai' ? body?.data?.[0]?.b64_json : geminiImage(body);
-  if (!b64) throw new ImageGenError(`${name} didn't return a picture. Try describing it differently.`);
+  if (!b64) throw new ImageGenError(t('error.noPicture', { name }));
   const mime = provider === 'openai' ? 'image/png' : b64.mimeType;
   return { blob: base64ToBlob(provider === 'openai' ? b64 : b64.data, mime), usage: usageOf(provider, body) };
 }
@@ -207,7 +207,7 @@ function usageOf(provider, body) {
 
 function geminiImage(body) {
   const blocked = body?.promptFeedback?.blockReason;
-  if (blocked) throw new ImageGenError(`Gemini wouldn't draw that (${blocked}). Try something else.`);
+  if (blocked) throw new ImageGenError(t('error.blocked', { reason: blocked }));
   const parts = body?.candidates?.[0]?.content?.parts ?? [];
   const part = parts.find((p) => p.inlineData?.data);
   return part && { data: part.inlineData.data, mimeType: part.inlineData.mimeType ?? 'image/png' };

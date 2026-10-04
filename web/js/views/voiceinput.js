@@ -2,16 +2,17 @@
 // say what they want. Uses the browser's speech recognition (Safari and Chrome);
 // where that's missing or the microphone is blocked, the box falls back to typing.
 
+import { speechLocale, t } from '../i18n.js';
+
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 // Why voice is off, for the grown-up setting things up. Kids just get the text box.
 const REASONS = {
-  insecure: () =>
-    `Voice needs a secure address (https://). This page is ${location.origin}, so the browser won't allow the microphone here. Type the idea instead, or open the app over https (see README).`,
-  blocked: () => 'The microphone is blocked for this site. In Safari tap aA → Website Settings → Microphone → Allow, then reopen this box.',
-  dictation: () => 'Voice needs Dictation. On iPad: Settings → General → Keyboard → turn on Dictation, then reopen this box.',
-  'no-mic': () => 'No microphone was found.',
-  network: () => 'Voice needs an internet connection. Type the idea instead.',
+  insecure: () => t('voice.insecure', { origin: location.origin }),
+  blocked: () => t('voice.blocked'),
+  dictation: () => t('voice.dictation'),
+  'no-mic': () => t('voice.noMic'),
+  network: () => t('voice.network'),
 };
 
 export class VoiceInput {
@@ -20,7 +21,6 @@ export class VoiceInput {
     this.mic = mic;
     this.keyboard = keyboard;
     this.hint = hint;
-    this.placeholder = input.placeholder;
     this.recognition = null;
     this.reason = null;
     this.available = Boolean(Recognition);
@@ -41,7 +41,7 @@ export class VoiceInput {
     if (!this.available || this.recognition) return;
     if (this.reason === 'network') this.reason = null; // try again
     const recognition = new Recognition();
-    recognition.lang = navigator.language || 'en-US';
+    recognition.lang = speechLocale(); // listen in the app's language
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.addEventListener('result', (e) => {
@@ -93,7 +93,7 @@ export class VoiceInput {
     this.keyboard.hidden = !this.available;
     this.mic.classList.toggle('listening', listening);
     this.mic.setAttribute('aria-pressed', String(listening));
-    this.input.placeholder = listening ? 'Listening… say what to draw!' : this.placeholder;
+    this.input.placeholder = t(listening ? 'create.listening' : 'create.placeholder');
     if (this.hint) {
       this.hint.textContent = this.reason ? REASONS[this.reason]() : '';
       this.hint.hidden = !this.reason;

@@ -2,6 +2,8 @@
 // instantly but young children can't. Answers are three buttons (no keyboard);
 // the wrong ones are near misses so they can't be ruled out by size alone.
 
+import { t } from '../i18n.js';
+
 export class ParentGate {
   constructor(dialog) {
     this.dialog = dialog;
@@ -16,7 +18,7 @@ export class ParentGate {
       if (Number(button.dataset.value) === this.expected) {
         this.#finish(true);
       } else {
-        this.hint.textContent = 'Not quite. Try this one.';
+        this.hint.textContent = t('gate.wrong');
         this.dialog.classList.remove('shake');
         void this.dialog.offsetWidth; // restart the animation
         this.dialog.classList.add('shake');

@@ -2,11 +2,16 @@
 
 import { PROVIDERS, loadApiKeys, saveApiKey, isManagedKey } from '../imagegen.js';
 import { loadLog, clearLog, monthTotals, fetchOpenAISpend } from '../usagelog.js';
+import { getLocale, t } from '../i18n.js';
 
 const ADMIN = 'openaiAdmin'; // key name in the API-key store and config.local.json
 
-const money = (usd) => (usd == null ? '—' : `$${usd < 1 ? usd.toFixed(3) : usd.toFixed(2)}`);
-const when = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const money = (usd, currency = 'USD') => {
+  if (usd == null) return '—';
+  const digits = usd < 1 ? 3 : 2;
+  return new Intl.NumberFormat(getLocale(), { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(usd);
+};
+const when = (date) => new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 
 export class LogView {
   constructor(dialog) {
@@ -24,7 +29,7 @@ export class LogView {
 
   open() {
     this.clearArmed = false;
-    this.q('#log-clear').textContent = 'Clear log';
+    this.q('#log-clear').textContent = t('log.clear');
     this.#render();
     this.dialog.showModal();
   }
@@ -35,17 +40,18 @@ export class LogView {
     const q = this.q;
 
     q('#log-images').textContent = String(log.totals.images);
-    q('#log-images-month').textContent = `${month.images} this month`;
+    q('#log-images-month').textContent = t('log.thisMonth', { value: month.images });
     q('#log-cost').textContent = money(log.totals.costUsd);
     q('#log-cost-month').textContent =
-      `${money(month.costUsd)} this month` + (log.totals.unpriced ? ` · ${log.totals.unpriced} without a known price` : '');
-    q('#log-since').textContent = `Counting since ${when.format(new Date(log.since))} on this device.`;
+      t('log.thisMonth', { value: money(month.costUsd) }) +
+      (log.totals.unpriced ? ` · ${t('log.unpriced', { count: log.totals.unpriced })}` : '');
+    q('#log-since').textContent = t('log.since', { date: when(new Date(log.since)) });
 
     const list = q('#log-entries');
     if (!log.entries.length) {
       const empty = document.createElement('li');
       empty.className = 'log-empty';
-      empty.textContent = 'No coloring pages yet.';
+      empty.textContent = t('log.empty');
       list.replaceChildren(empty);
     } else {
       list.replaceChildren(...log.entries.map(entryRow));
@@ -62,22 +68,22 @@ export class LogView {
     input.value = managed ? '••••••••••••' : key;
     q('#log-admin-managed').hidden = !managed;
     q('#log-spend-check').disabled = !key;
-    if (!this.spendChecked) q('#log-spend').textContent = key ? 'Not checked yet' : 'Needs an admin key';
+    if (!this.spendChecked) q('#log-spend').textContent = t(key ? 'log.notChecked' : 'log.needsKey');
   }
 
   async #checkSpend() {
     const q = this.q;
     const button = q('#log-spend-check');
     button.disabled = true;
-    q('#log-spend').textContent = 'Asking OpenAI…';
+    q('#log-spend').textContent = t('log.asking');
     q('#log-spend-note').textContent = '';
     try {
       const { total, currency, since } = await fetchOpenAISpend(loadApiKeys()[ADMIN]);
-      q('#log-spend').textContent = currency.toLowerCase() === 'usd' ? money(total) : `${total.toFixed(2)} ${currency.toUpperCase()}`;
-      q('#log-spend-note').textContent = `Whole OpenAI organization, since ${since.toLocaleDateString()} (UTC). OpenAI updates costs with a delay of up to a day.`;
+      q('#log-spend').textContent = money(total, currency.toUpperCase());
+      q('#log-spend-note').textContent = t('log.spendNote', { date: since.toLocaleDateString(getLocale(), { timeZone: 'UTC' }) });
       this.spendChecked = true;
     } catch (error) {
-      q('#log-spend').textContent = 'Couldn’t check';
+      q('#log-spend').textContent = t('log.couldntCheck');
       q('#log-spend-note').textContent = error.message;
     } finally {
       button.disabled = !loadApiKeys()[ADMIN];
@@ -89,12 +95,12 @@ export class LogView {
     const button = this.q('#log-clear');
     if (!this.clearArmed) {
       this.clearArmed = true;
-      button.textContent = 'Tap again to clear the log';
+      button.textContent = t('log.clearConfirm');
       return;
     }
     clearLog();
     this.clearArmed = false;
-    button.textContent = 'Clear log';
+    button.textContent = t('log.clear');
     this.#render();
   }
 }
@@ -107,10 +113,10 @@ function entryRow(e) {
   top.className = 'log-entry-top';
   const time = document.createElement('time');
   time.dateTime = e.at;
-  time.textContent = when.format(new Date(e.at));
+  time.textContent = when(new Date(e.at));
   const cost = document.createElement('span');
   cost.className = 'log-entry-cost';
-  cost.textContent = e.ok ? money(e.costUsd) : 'failed';
+  cost.textContent = e.ok ? money(e.costUsd) : t('log.failed');
   top.append(time, cost);
 
   const text = document.createElement('p');
@@ -119,7 +125,7 @@ function entryRow(e) {
 
   const meta = document.createElement('p');
   meta.className = 'log-entry-meta';
-  const tokens = e.usage ? ` · ${e.usage.textIn + (e.usage.imageIn ?? 0)} in / ${e.usage.out} out tokens` : '';
+  const tokens = e.usage ? ` · ${t('log.tokens', { in: e.usage.textIn + (e.usage.imageIn ?? 0), out: e.usage.out })}` : '';
   meta.textContent = `${PROVIDERS[e.provider]?.label ?? e.provider} · ${e.model}${tokens}`;
   li.append(top, text, meta);
 

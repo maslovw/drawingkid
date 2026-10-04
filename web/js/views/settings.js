@@ -1,15 +1,20 @@
-// Settings dialog: choose which tools and colors appear on the main screen.
+// Settings dialog: language, and which tools and colors appear on the main screen.
 
 import { TOOLS, COLORS, SIZES, colorCss } from '../config.js';
 import { icon } from '../icons.js';
+import { LANGUAGES, getLanguage, t } from '../i18n.js';
 import { PROVIDERS, loadApiKeys, saveApiKey, knownModels, refreshModels, isManagedKey } from '../imagegen.js';
 
 export class SettingsView {
   constructor(dialog, vm) {
     this.dialog = dialog;
     this.vm = vm;
-    this.#build();
-    vm.addEventListener('change', () => this.#sync());
+    this.#bind();
+    this.#buildChoices();
+    vm.addEventListener('change', () => {
+      if (this.builtFor !== getLanguage()) this.#buildChoices(); // relabel in the new language
+      this.#sync();
+    });
     this.#sync();
   }
 
@@ -37,13 +42,13 @@ export class SettingsView {
     const button = q('#settings-refresh');
     const status = q('#settings-model-status');
     button.disabled = true;
-    status.textContent = `Asking ${PROVIDERS[provider].label} for its image models…`;
+    status.textContent = t('settings.asking', { name: PROVIDERS[provider].label });
     try {
       const models = await refreshModels(provider, key);
       saveApiKey(provider, key);
       if (this.vm.config.imageProvider !== provider) return; // switched provider meanwhile
       this.#fillModels();
-      status.textContent = `Found ${models.length} image model${models.length === 1 ? '' : 's'}. Pick one from the list.`;
+      status.textContent = t('settings.found', { count: models.length });
       const select = q('#settings-model');
       select.focus();
       try {
@@ -58,14 +63,22 @@ export class SettingsView {
     }
   }
 
-  #build() {
+  // Choice lists, rebuilt when the language changes.
+  #buildChoices() {
     const { vm, dialog } = this;
     const q = (sel) => dialog.querySelector(sel);
+    this.builtFor = getLanguage();
 
+    // Languages are listed by their own names, so anyone can find theirs.
+    q('#settings-language').replaceChildren(
+      ...[{ id: 'auto', name: t('settings.languageAuto') }, ...LANGUAGES].map((l) =>
+        choice('radio', 'language', l.id, l.name, () => vm.setLanguage(l.id), l.id === 'auto' ? '' : l.id),
+      ),
+    );
     q('#settings-tools').replaceChildren(
-      ...TOOLS.map((t) =>
-        choice('checkbox', 'tools', t.id, `<span class="icon" aria-hidden="true">${icon(t.id)}</span>${t.label}`, (on) =>
-          vm.setToolVisible(t.id, on),
+      ...TOOLS.map((tool) =>
+        choice('checkbox', 'tools', tool.id, `<span class="icon" aria-hidden="true">${icon(tool.id)}</span>${t(`tool.${tool.id}`)}`, (on) =>
+          vm.setToolVisible(tool.id, on),
         ),
       ),
     );
@@ -75,21 +88,27 @@ export class SettingsView {
           'checkbox',
           'colors',
           c.id,
-          `<span class="swatch-preview" data-color="${c.id}" style="background:${colorCss(c.id, vm.palette)}"></span>${c.label}`,
+          `<span class="swatch-preview" data-color="${c.id}" style="background:${colorCss(c.id, vm.palette)}"></span>${t(`color.${c.id}`)}`,
           (on) => vm.setColorVisible(c.id, on),
         ),
       ),
     );
     q('#settings-size').replaceChildren(
-      ...SIZES.map((s) => choice('radio', 'size', s.id, s.label, () => vm.setDefaultSize(s.id))),
+      ...SIZES.map((s) => choice('radio', 'size', s.id, t(`size.${s.id}`), () => vm.setDefaultSize(s.id))),
     );
+    q('#settings-provider').replaceChildren(
+      ...Object.entries(PROVIDERS).map(([id, p]) => choice('radio', 'provider', id, p.label, () => vm.setImageProvider(id))),
+    );
+  }
+
+  // Listeners on the dialog's fixed controls.
+  #bind() {
+    const { vm, dialog } = this;
+    const q = (sel) => dialog.querySelector(sel);
     q('#settings-lefty').addEventListener('change', (e) => vm.setLeftHanded(e.target.checked));
     q('#settings-labels').addEventListener('change', (e) => vm.setShowLabels(e.target.checked));
 
     q('#settings-imagegen').addEventListener('change', (e) => vm.setImageGenEnabled(e.target.checked));
-    q('#settings-provider').replaceChildren(
-      ...Object.entries(PROVIDERS).map(([id, p]) => choice('radio', 'provider', id, p.label, () => vm.setImageProvider(id))),
-    );
     q('#settings-model').addEventListener('change', (e) => vm.setImageModel(vm.config.imageProvider, e.target.value));
     q('#settings-key').addEventListener('change', (e) => saveApiKey(vm.config.imageProvider, e.target.value.trim()));
     q('#settings-refresh').addEventListener('click', () => this.#refreshModels());
@@ -113,8 +132,9 @@ export class SettingsView {
         input.disabled = input.checked && visible.length === 1;
       }
     }
+    for (const input of inputs('language')) input.checked = input.value === config.language;
     for (const input of inputs('size')) input.checked = input.value === config.defaultSize;
-    for (const el of this.dialog.querySelectorAll('input[name="size"], input[name="provider"], #settings-lefty, #settings-labels, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
+    for (const el of this.dialog.querySelectorAll('input[name="language"], input[name="size"], input[name="provider"], #settings-lefty, #settings-labels, #settings-imagegen, #settings-key, #settings-model, #settings-refresh')) {
       el.disabled = false;
     }
     this.dialog.querySelector('#settings-lefty').checked = config.leftHanded;
@@ -143,6 +163,7 @@ export class SettingsView {
       }
     };
     const provider = vm.config.imageProvider;
+    lock(inputs('language'), vm.isManaged('language'));
     lock(inputs('tools'), vm.isManaged('visibleTools'));
     lock(inputs('colors'), vm.isManaged('visibleColors'));
     lock(inputs('size'), vm.isManaged('defaultSize'));
@@ -161,9 +182,10 @@ export class SettingsView {
   }
 }
 
-function choice(type, name, value, html, onChange) {
+function choice(type, name, value, html, onChange, lang = '') {
   const label = document.createElement('label');
   label.className = 'choice';
+  if (lang) label.lang = lang;
   const input = document.createElement('input');
   input.type = type;
   input.name = name;

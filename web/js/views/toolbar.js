@@ -2,6 +2,7 @@
 
 import { TOOLS, COLORS, SIZES, PALETTES, colorCss } from '../config.js';
 import { icon } from '../icons.js';
+import { t } from '../i18n.js';
 
 export class ToolbarView {
   constructor({ tools, sizes, palettes, colors }, vm) {
@@ -17,15 +18,16 @@ export class ToolbarView {
     const brushColor = colorCss(vm.color, vm.palette);
 
     this.els.tools.replaceChildren(
-      ...TOOLS.filter((t) => visibleTools.includes(t.id)).map((t) =>
-        button({
+      ...TOOLS.filter((tool) => visibleTools.includes(tool.id)).map((tool) => {
+        const label = t(`tool.${tool.id}`);
+        return button({
           className: 'tool',
-          pressed: vm.tool === t.id,
-          label: t.label,
-          html: `<span class="icon" aria-hidden="true">${icon(t.id)}</span><span class="caption">${t.label}</span>`,
-          onClick: () => vm.setTool(t.id),
-        }),
-      ),
+          pressed: vm.tool === tool.id,
+          label,
+          html: `<span class="icon" aria-hidden="true">${icon(tool.id)}</span><span class="caption">${label}</span>`,
+          onClick: () => vm.setTool(tool.id),
+        });
+      }),
     );
 
     // Size doesn't apply to the paint bucket.
@@ -36,7 +38,7 @@ export class ToolbarView {
         return button({
           className: 'size',
           pressed: vm.size === s.id,
-          label: `${s.label} brush`,
+          label: t(`brush.${s.id}`),
           html: `<span class="dot" style="width:${dot}px;height:${dot}px;background:${brushColor}"></span>`,
           onClick: () => vm.setSize(s.id),
         });
@@ -49,7 +51,7 @@ export class ToolbarView {
         button({
           className: 'palette',
           pressed: vm.palette === p.id,
-          label: p.label,
+          label: t(`palette.${p.id}`),
           html: p.preview
             .map((id) => `<span class="palette-dot" style="background:${p.colors[id]}"></span>`)
             .join(''),
@@ -63,7 +65,7 @@ export class ToolbarView {
         const b = button({
           className: 'swatch',
           pressed: vm.color === c.id,
-          label: c.label,
+          label: t(`color.${c.id}`),
           onClick: () => vm.setColor(c.id),
         });
         b.style.setProperty('--swatch', colorCss(c.id, vm.palette));

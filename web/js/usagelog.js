@@ -2,6 +2,8 @@
 // it cost. Kept in this browser's localStorage. Totals are stored apart from the entries,
 // so trimming old entries never loses the counts.
 
+import { t } from './i18n.js';
+
 const STORAGE_KEY = 'drawingkid.log';
 const MAX_ENTRIES = 300;
 
@@ -91,7 +93,7 @@ export class SpendError extends Error {}
 // What OpenAI actually billed this calendar month (UTC), for the whole organization.
 // Needs an Admin API key (sk-admin-…); regular project keys can't read costs.
 export async function fetchOpenAISpend(adminKey, now = new Date()) {
-  if (!adminKey) throw new SpendError('Add an OpenAI admin key first.');
+  if (!adminKey) throw new SpendError(t('error.addAdminKey'));
   const start = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) / 1000);
   let total = 0;
   let currency = 'usd';
@@ -106,11 +108,11 @@ export async function fetchOpenAISpend(adminKey, now = new Date()) {
     try {
       response = await fetch(url, { headers: { Authorization: `Bearer ${adminKey}` } });
     } catch {
-      throw new SpendError("Couldn't reach OpenAI. Check the internet connection.");
+      throw new SpendError(t('error.unreachable', { name: 'OpenAI' }));
     }
     const body = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new SpendError(`OpenAI said: ${body?.error?.message ?? `HTTP ${response.status}`}`);
+      throw new SpendError(t('error.said', { name: 'OpenAI', detail: body?.error?.message ?? `HTTP ${response.status}` }));
     }
     for (const bucket of body?.data ?? []) {
       for (const result of bucket.results ?? []) {

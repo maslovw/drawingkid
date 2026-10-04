@@ -80,6 +80,10 @@ export class AppViewModel extends EventTarget {
     this.#updateConfig({ defaultSize: id });
   }
 
+  setLanguage(language) {
+    this.#updateConfig({ language });
+  }
+
   setLeftHanded(leftHanded) {
     this.#updateConfig({ leftHanded });
   }

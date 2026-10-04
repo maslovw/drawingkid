@@ -3,6 +3,7 @@
 import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
 import { colorValue, loadConfig, loadServerConfig } from './config.js';
 import { icon, inkDefs } from './icons.js';
+import { applyTranslations, setLanguage, t } from './i18n.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
@@ -20,6 +21,19 @@ const $ = (id) => document.getElementById(id);
 const server = await loadServerConfig();
 setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
+
+// Language first, so the views below render in it. This listener is registered before
+// theirs, so after a change in Settings they also re-render in the new language.
+function syncLanguage() {
+  if (setLanguage(vm.config.language)) {
+    applyTranslations();
+    buildIdeaChips();
+  }
+}
+vm.addEventListener('change', syncLanguage);
+setLanguage(vm.config.language);
+applyTranslations();
+
 const doc = new DrawingDocument({ bg: $('bg'), draw: $('draw'), live: $('live') });
 new CanvasInput($('paper'), $('live'), doc, () => vm.nextBrush());
 new ToolbarView({ tools: $('tools'), sizes: $('sizes'), palettes: $('palettes'), colors: $('colors') }, vm);
@@ -132,33 +146,35 @@ $('file').addEventListener('change', async (e) => {
   try {
     await doc.importBackground(file);
   } catch {
-    toast("Oops, that picture couldn't be opened.");
+    toast(t('toast.badPicture'));
   }
 });
 
 // --- Coloring page generator --------------------------------------------
 
-const IDEAS = ['A dinosaur eating ice cream', 'A cat astronaut on the moon', 'A castle with a friendly dragon', 'An underwater tea party'];
 let generation = null; // AbortController while a page is being made
 
-$('create-chips').replaceChildren(
-  ...IDEAS.map((idea) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = idea;
-    b.addEventListener('click', () => {
-      voice.stop();
-      $('create-idea').value = idea;
-    });
-    return b;
-  }),
-);
+function buildIdeaChips() {
+  $('create-chips').replaceChildren(
+    ...t('create.ideas').map((idea) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = idea;
+      b.addEventListener('click', () => {
+        voice.stop();
+        $('create-idea').value = idea;
+      });
+      return b;
+    }),
+  );
+}
+buildIdeaChips();
 
 $('create').addEventListener('click', () => {
   const { imageProvider } = vm.config;
   $('create-status').textContent = loadApiKeys()[imageProvider]
     ? ''
-    : `Ask a grown-up to add an API key for ${PROVIDERS[imageProvider].label} in Settings first.`;
+    : t('create.needKey', { name: PROVIDERS[imageProvider].label });
   $('create-dialog').showModal();
   voice.start(); // listen straight away; the keyboard button is there for typing
 });
@@ -183,7 +199,7 @@ $('create-go').addEventListener('click', async () => {
   generation = new AbortController();
   dialog.setAttribute('aria-busy', 'true');
   $('create-go').disabled = true;
-  $('create-status').textContent = 'Drawing your page… this takes about 10–30 seconds.';
+  $('create-status').textContent = t('create.working');
   try {
     const model = imageModels[provider];
     let result;
@@ -212,11 +228,11 @@ $('create-go').addEventListener('click', async () => {
     dialog.close();
     $('create-idea').value = '';
     vm.setTool(vm.config.visibleTools.includes('fill') ? 'fill' : vm.config.visibleTools[0]);
-    toast('Your coloring page is ready! 🖍️');
+    toast(t('toast.pageReady'));
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error(error);
-      $('create-status').textContent = error.message || 'Something went wrong. Please try again.';
+      $('create-status').textContent = error.message || t('create.failed');
     }
   } finally {
     generation = null;
@@ -248,7 +264,7 @@ $('export').addEventListener('click', async () => {
   // On iPad this opens the share sheet, which includes "Save Image" to Photos.
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'My drawing' });
+      await navigator.share({ files: [file], title: t('save.shareTitle') });
       return;
     } catch (error) {
       if (error.name === 'AbortError') return;

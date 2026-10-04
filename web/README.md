@@ -28,7 +28,8 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Palettes | Three buttons under the brush sizes switch between **Classic**, **Vibrant** (neon) and **Pastel** colors. Each button shows four dots of its colors. The same color slots are used in every palette, so Settings still chooses which ones show. Rainbow and Surprise follow the palette (a pastel rainbow is soft). Lines already drawn keep their color. The choice is remembered on the device. |
 | Undo / redo | 50 steps, including fills, clears and background changes. ⌘Z / ⇧⌘Z / Ctrl+Y also work. |
 | Picture upload | Becomes a background layer. The eraser doesn't erase it, and the fill bucket respects its outlines, so coloring pages work. |
-| Settings | Choose which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
+| Languages | English, Русский, Українська, Deutsch, Français, Español and Italiano. Pick one under Settings → **Language**, or leave it on **Same as the device**, which uses the first of the device's languages the app has (English otherwise). Everything is translated: buttons, dialogs, the Log, error messages and the idea suggestions in Create. Voice input listens in the chosen language. The choice is saved with the other settings and can be fixed for every device in `config.local.json` (`"language": "de"`). |
+| Settings | Choose the language, which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Type one sentence ("a dinosaur eating ice cream") and get a black-and-white coloring page from OpenAI or Gemini. |
 | Log | In Settings, **Log** shows how many coloring pages were made (in total and this month), what they cost, and every request with the child's words, the model, token counts and any error. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
@@ -78,7 +79,7 @@ To set things up once for every device, copy `config.local.example.json` to `con
 Every device that opens the app from this server loads the file at startup:
 
 - **API keys** in the file are used on every device and can't be viewed or changed in Settings.
-- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `visibleTools`, `visibleColors`, `defaultSize`, `leftHanded`, `showLabels`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
+- **Settings** in the file win over each device's own choices and are shown locked (🔒) in Settings. Any setting can go in the file: `language` (`en`, `ru`, `uk`, `de`, `fr`, `es`, `it` or `auto`), `visibleTools`, `visibleColors`, `defaultSize`, `leftHanded`, `showLabels`, `enableImageGen`, `imageProvider` and `imageModels`. It uses the same values as the app's saved settings, for example `"visibleTools": ["pen", "marker", "fill"]` or `"defaultSize": "large"`. Settings not in the file can still be changed per device.
 - Changes take effect the next time the app is opened or reloaded.
 
 `config.local.json` is in `.gitignore`, so keys don't end up in the repository. The server hands the file to anyone who can reach it, so anyone on your home network could read the keys. Serve the app only on your home network, and use keys with a spending limit.
@@ -103,7 +104,7 @@ The **Create** button turns one sentence into a coloring page. It works with eit
 
 Model names change often, so Settings has a **Refresh** button next to the model list. It asks the provider which image models your key can use (`GET /v1/models` for OpenAI, `models.list` for Gemini), fills the dropdown newest first and opens it. The list is remembered in this browser. Before the first refresh, the dropdown offers built-in suggestions: `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `gpt-image-2`, `gpt-image-1` for OpenAI, and `gemini-3.1-flash-image`, `gemini-3.1-flash-image-preview`, `gemini-2.5-flash-image` for Gemini. OpenAI shuts down `gpt-image-1.5` and `gpt-image-1-mini` on December 1, 2026. If the provider rejects a model, the app shows the provider's error message.
 
-Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the device's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`, see *HTTPS on the home network*) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
+Kids don't have to type. The dialog starts listening as soon as it opens (the browser's speech recognition, in the app's language), and the words appear in the box. Tap the microphone to say it again, or the keyboard button to type instead. Voice needs HTTPS (or `localhost`, see *HTTPS on the home network*) and microphone permission. On iPad, Dictation must be turned on (Settings → General → Keyboard). Safari sends the audio to Apple and Chrome sends it to Google for transcription. If speech recognition isn't available or the microphone is blocked, the dialog shows a plain text box.
 
 The app wraps the sentence in a coloring-page prompt (thick closed outlines, no shading, no text). It then cleans the result into pure black and white, so the fill bucket stays inside the lines. The canvas is cleared and the page becomes the background layer. One undo brings back the previous drawing.
 
@@ -151,6 +152,7 @@ web/
     ├── imagegen.js       coloring pages via OpenAI / Gemini
     ├── usagelog.js       request log, token prices, OpenAI Costs API
     ├── icons.js          button glyphs (SVG) in one sticker style
+    ├── i18n.js           interface languages: all texts, t(), plural rules
     └── views/
         ├── toolbar.js    tools, sizes, palette
         ├── settings.js   settings dialog
@@ -160,3 +162,11 @@ web/
 ```
 
 The drawing is stored as a log of small operations (strokes, fills, clears, background changes) rather than bitmaps. That makes undo exact and the saved data small. Once there are more than 50 operations, the oldest are merged ("baked") into a base image.
+
+## Languages
+
+All interface text lives in `js/i18n.js`, one block per language. `t('key', { name })` returns the text for the current language and fills in `{name}` placeholders. Texts in `index.html` are marked with `data-i18n` (text), `data-i18n-html` (text with markup) or `data-i18n-attr` (attributes such as `title`). Counted phrases use the language's plural rules (`one` / `few` / `many` / `other`), which Russian and Ukrainian need. A key missing from a language falls back to English.
+
+Button words are short on purpose, because the buttons are about 58 points wide. Russian and Ukrainian words are set a little smaller, and anything still too long ends in "…".
+
+To add a language, add it to `LANGUAGES` and give it a block in `STRINGS` with the same keys as `en`.

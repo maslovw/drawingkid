@@ -3,7 +3,8 @@
 import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
 import { colorValue, loadConfig, loadServerConfig } from './config.js';
 import { icon, inkDefs } from './icons.js';
-import { applyTranslations, setLanguage, t } from './i18n.js';
+import { applyTranslations, getLanguage, setLanguage, t } from './i18n.js';
+import { fetchPage, loadLibrary, pageLabel, pageThumbs, pickPages } from './library.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
@@ -18,7 +19,7 @@ import { VoiceInput } from './views/voiceinput.js';
 
 const $ = (id) => document.getElementById(id);
 
-const server = await loadServerConfig();
+const [server, library] = await Promise.all([loadServerConfig(), loadLibrary()]);
 setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 
@@ -27,7 +28,7 @@ const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 function syncLanguage() {
   if (setLanguage(vm.config.language)) {
     applyTranslations();
-    buildIdeaChips();
+    buildIdeaChips({ shuffle: false });
   }
 }
 vm.addEventListener('change', syncLanguage);
@@ -250,33 +251,83 @@ for (const item of $('more-menu').querySelectorAll('[data-for]')) {
 
 // --- Coloring page generator --------------------------------------------
 
-// Idea pictures read without words: tapping one fills in its sentence. Labels and
-// sentences come from the translations, in this order.
+// Idea tiles read without words. Each time Create opens it shows three pre-made pages
+// from the library (pages/library.json), shuffled, plus a button for three others. A
+// tile whose picture is there puts it on the paper straight away, for free; one whose
+// picture isn't made yet fills in its words for the generator. Without a library the
+// built-in ideas show, whose labels and sentences come from the translations.
 const IDEA_GLYPHS = ['dino', 'rocket', 'castle', 'fish'];
-let generation = null; // AbortController while a page is being made
-let ideaTexts = [];
+const TILE_COUNT = 3;
+let generation = null; // AbortController while a page is being made or loaded
+let ideaTexts = []; // the words each tile fills in, to show which one is picked
+let shownPages = [];
 
-function buildIdeaChips() {
-  const tiles = t('create.ideaTiles');
-  ideaTexts = tiles.map(([, text]) => text);
-  $('create-chips').replaceChildren(
-    ...IDEA_GLYPHS.map((glyph, i) => {
-      const [label, text] = tiles[i];
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'idea-tile';
-      b.setAttribute('aria-pressed', 'false');
-      b.setAttribute('aria-label', text);
-      b.innerHTML = `<span class="icon" aria-hidden="true">${icon(glyph)}</span><span class="caption"></span>`;
-      b.querySelector('.caption').textContent = label;
-      b.addEventListener('click', () => {
-        voice.stop();
-        $('create-idea').value = text;
-        syncIdeaTiles();
-      });
-      return b;
-    }),
+function tileButton(glyph, label, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'idea-tile';
+  b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = `<span class="icon" aria-hidden="true">${icon(glyph)}</span><span class="caption"></span>`;
+  b.querySelector('.caption').textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function fillIdea(text) {
+  voice.stop();
+  $('create-idea').value = text;
+  syncIdeaTiles();
+}
+
+function libraryTile(page) {
+  const label = pageLabel(page, getLanguage());
+  const urls = pageThumbs(page, doc.width >= doc.height);
+  const img = document.createElement('img');
+  img.className = 'idea-thumb';
+  img.alt = '';
+  img.decoding = 'async';
+  let tried = 0;
+  const b = tileButton(page.glyph ?? 'create', label, () =>
+    b.classList.contains('has-picture') ? usePremadePage(page) : fillIdea(label),
   );
+  b.setAttribute('aria-label', label);
+  img.addEventListener('load', () => b.classList.add('has-picture'));
+  img.addEventListener('error', () => {
+    if (++tried < urls.length) img.src = urls[tried];
+  });
+  img.src = urls[0];
+  b.prepend(img);
+  return b;
+}
+
+function buildIdeaChips({ shuffle = true } = {}) {
+  let tiles;
+  if (library.length) {
+    if (shuffle || !shownPages.length) shownPages = pickPages(library, TILE_COUNT, new Set(shownPages.map((p) => p.id)));
+    tiles = shownPages.map(libraryTile);
+    ideaTexts = shownPages.map((page) => pageLabel(page, getLanguage()));
+    if (library.length > TILE_COUNT) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'idea-shuffle';
+      more.title = t('create.shuffle');
+      more.setAttribute('aria-label', t('create.shuffle'));
+      more.innerHTML = `<span class="icon" aria-hidden="true">${icon('shuffle')}</span>`;
+      more.addEventListener('click', () => buildIdeaChips());
+      tiles.push(more);
+    }
+  } else {
+    const ideas = t('create.ideaTiles');
+    ideaTexts = ideas.map(([, text]) => text);
+    tiles = IDEA_GLYPHS.map((glyph, i) => {
+      const [label, text] = ideas[i];
+      const b = tileButton(glyph, label, () => fillIdea(text));
+      b.setAttribute('aria-label', text);
+      return b;
+    });
+  }
+  $('create-chips').classList.toggle('library', library.length > 0);
+  $('create-chips').replaceChildren(...tiles);
   syncIdeaTiles();
 }
 
@@ -290,61 +341,25 @@ $('create-idea').addEventListener('input', syncIdeaTiles);
 buildIdeaChips();
 
 $('create').addEventListener('click', () => {
-  const { imageProvider } = vm.config;
-  $('create-status').textContent = loadApiKeys()[imageProvider]
-    ? ''
-    : t('create.needKey', { name: PROVIDERS[imageProvider].label });
-  syncIdeaTiles();
+  $('create-status').textContent = '';
+  buildIdeaChips(); // new suggestions every time
   $('create-dialog').showModal();
   voice.start(); // listen straight away; the keyboard button is there for typing
 });
 
-$('create-idea').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('create-go').click();
-  }
-});
-
-$('create-go').addEventListener('click', async () => {
-  voice.stop();
-  const idea = $('create-idea').value.trim();
-  if (!idea) {
-    voice.available ? voice.start() : $('create-idea').focus();
-    return;
-  }
+// Shows the drawing animation while `load` fetches or generates a page, then puts the
+// page on the paper. `load` gets an AbortSignal and returns { blob, options }.
+async function makePage(load) {
   if (generation) return;
+  voice.stop();
   const dialog = $('create-dialog');
-  const { imageProvider: provider, imageModels } = vm.config;
   generation = new AbortController();
   dialog.setAttribute('aria-busy', 'true');
   $('create-go').disabled = true;
   $('create-status').textContent = ''; // the drawing animation shows it's working
   try {
-    const model = imageModels[provider];
-    let result;
-    try {
-      result = await generateColoringPage({
-        provider,
-        model,
-        apiKey: loadApiKeys()[provider],
-        idea,
-        aspect: doc.width / doc.height,
-        signal: generation.signal,
-      });
-    } catch (error) {
-      if (error.name !== 'AbortError') recordRequest({ text: idea, provider, model, ok: false, error: error.message });
-      throw error;
-    }
-    recordRequest({
-      text: idea,
-      provider,
-      model,
-      ok: true,
-      usage: result.usage,
-      costUsd: estimateCost(model, result.usage),
-    });
-    await doc.importBackground(result.blob, { colored: true, clear: true });
+    const { blob, options } = await load(generation.signal);
+    await doc.importBackground(blob, { ...options, clear: true });
     dialog.close();
     $('create-idea').value = '';
     syncIdeaTiles();
@@ -360,6 +375,47 @@ $('create-go').addEventListener('click', async () => {
     dialog.removeAttribute('aria-busy');
     $('create-go').disabled = false;
   }
+}
+
+function usePremadePage(page) {
+  return makePage(async (signal) => ({
+    blob: await fetchPage(page, doc.width >= doc.height, signal),
+    options: page.style === 'lineArt' ? { lineArt: true } : { colored: true },
+  }));
+}
+
+$('create-idea').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('create-go').click();
+  }
+});
+
+$('create-go').addEventListener('click', () => {
+  voice.stop();
+  const idea = $('create-idea').value.trim();
+  if (!idea) {
+    voice.available ? voice.start() : $('create-idea').focus();
+    return;
+  }
+  const { imageProvider: provider, imageModels } = vm.config;
+  const apiKey = loadApiKeys()[provider];
+  if (!apiKey) {
+    $('create-status').textContent = t('create.needKey', { name: PROVIDERS[provider].label });
+    return;
+  }
+  makePage(async (signal) => {
+    const model = imageModels[provider];
+    let result;
+    try {
+      result = await generateColoringPage({ provider, model, apiKey, idea, aspect: doc.width / doc.height, signal });
+    } catch (error) {
+      if (error.name !== 'AbortError') recordRequest({ text: idea, provider, model, ok: false, error: error.message });
+      throw error;
+    }
+    recordRequest({ text: idea, provider, model, ok: true, usage: result.usage, costUsd: estimateCost(model, result.usage) });
+    return { blob: result.blob, options: { colored: true } };
+  });
 });
 
 $('create-dialog').addEventListener('close', () => {

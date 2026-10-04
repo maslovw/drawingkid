@@ -1,0 +1,277 @@
+{
+  "_comment": [
+    "Pre-made coloring pages for the Create dialog. Each page's pictures are",
+    "<id>-portrait.png and <id>-landscape.png next to this file (override with",
+    "\"images\": {\"portrait\": \"…\", \"landscape\": \"…\", \"thumb\": \"…\"}; a thumb is optional",
+    "and saves downloading full pages for the tiles). They are colored pages, made",
+    "with the same prompt as Create; set \"style\": \"lineArt\" for black-and-white ones.",
+    "A page whose pictures are missing still shows, and tapping it asks the generator",
+    "instead. See web/README.md."
+  ],
+  "pages": [
+    {
+      "id": "dinosaur",
+      "prompt": "A friendly dinosaur smiling in a meadow",
+      "glyph": "dino",
+      "label": {
+        "en": "Dinosaur",
+        "ru": "Динозавр",
+        "uk": "Динозавр",
+        "de": "Dinosaurier",
+        "fr": "Dinosaure",
+        "es": "Dinosaurio",
+        "it": "Dinosauro"
+      }
+    },
+    {
+      "id": "unicorn",
+      "prompt": "A happy unicorn with a flowing mane",
+      "label": {
+        "en": "Unicorn",
+        "ru": "Единорог",
+        "uk": "Єдиноріг",
+        "de": "Einhorn",
+        "fr": "Licorne",
+        "es": "Unicornio",
+        "it": "Unicorno"
+      }
+    },
+    {
+      "id": "puppy",
+      "prompt": "A cute puppy playing with a ball",
+      "label": {
+        "en": "Puppy",
+        "ru": "Щенок",
+        "uk": "Цуценя",
+        "de": "Hündchen",
+        "fr": "Chiot",
+        "es": "Perrito",
+        "it": "Cagnolino"
+      }
+    },
+    {
+      "id": "kitten",
+      "prompt": "A cute kitten playing with a ball of yarn",
+      "label": {
+        "en": "Kitten",
+        "ru": "Котёнок",
+        "uk": "Кошеня",
+        "de": "Kätzchen",
+        "fr": "Chaton",
+        "es": "Gatito",
+        "it": "Gattino"
+      }
+    },
+    {
+      "id": "butterfly",
+      "prompt": "A big butterfly on a flower",
+      "label": {
+        "en": "Butterfly",
+        "ru": "Бабочка",
+        "uk": "Метелик",
+        "de": "Schmetterling",
+        "fr": "Papillon",
+        "es": "Mariposa",
+        "it": "Farfalla"
+      }
+    },
+    {
+      "id": "firetruck",
+      "prompt": "A fire truck with a ladder",
+      "label": {
+        "en": "Fire truck",
+        "ru": "Пожарная машина",
+        "uk": "Пожежна машина",
+        "de": "Feuerwehrauto",
+        "fr": "Camion de pompiers",
+        "es": "Camión de bomberos",
+        "it": "Camion dei pompieri"
+      }
+    },
+    {
+      "id": "racecar",
+      "prompt": "A race car with a big number on the side",
+      "label": {
+        "en": "Race car",
+        "ru": "Гоночная машина",
+        "uk": "Гоночна машина",
+        "de": "Rennauto",
+        "fr": "Voiture de course",
+        "es": "Coche de carreras",
+        "it": "Auto da corsa"
+      }
+    },
+    {
+      "id": "train",
+      "prompt": "A smiling steam train with two carriages",
+      "label": {
+        "en": "Train",
+        "ru": "Поезд",
+        "uk": "Потяг",
+        "de": "Zug",
+        "fr": "Train",
+        "es": "Tren",
+        "it": "Treno"
+      }
+    },
+    {
+      "id": "rocket",
+      "prompt": "A rocket flying to the moon",
+      "glyph": "rocket",
+      "label": {
+        "en": "Rocket",
+        "ru": "Ракета",
+        "uk": "Ракета",
+        "de": "Rakete",
+        "fr": "Fusée",
+        "es": "Cohete",
+        "it": "Razzo"
+      }
+    },
+    {
+      "id": "castle",
+      "prompt": "A castle with towers and flags",
+      "glyph": "castle",
+      "label": {
+        "en": "Castle",
+        "ru": "Замок",
+        "uk": "Замок",
+        "de": "Schloss",
+        "fr": "Château",
+        "es": "Castillo",
+        "it": "Castello"
+      }
+    },
+    {
+      "id": "princess",
+      "prompt": "A smiling princess with a crown",
+      "label": {
+        "en": "Princess",
+        "ru": "Принцесса",
+        "uk": "Принцеса",
+        "de": "Prinzessin",
+        "fr": "Princesse",
+        "es": "Princesa",
+        "it": "Principessa"
+      }
+    },
+    {
+      "id": "mermaid",
+      "prompt": "A smiling mermaid sitting on a rock in the sea",
+      "label": {
+        "en": "Mermaid",
+        "ru": "Русалка",
+        "uk": "Русалка",
+        "de": "Meerjungfrau",
+        "fr": "Sirène",
+        "es": "Sirena",
+        "it": "Sirena"
+      }
+    },
+    {
+      "id": "teddy",
+      "prompt": "A teddy bear holding a heart",
+      "label": {
+        "en": "Teddy bear",
+        "ru": "Мишка",
+        "uk": "Ведмедик",
+        "de": "Teddybär",
+        "fr": "Nounours",
+        "es": "Osito",
+        "it": "Orsacchiotto"
+      }
+    },
+    {
+      "id": "elephant",
+      "prompt": "A baby elephant spraying water",
+      "label": {
+        "en": "Elephant",
+        "ru": "Слон",
+        "uk": "Слон",
+        "de": "Elefant",
+        "fr": "Éléphant",
+        "es": "Elefante",
+        "it": "Elefante"
+      }
+    },
+    {
+      "id": "lion",
+      "prompt": "A friendly lion with a big mane",
+      "label": {
+        "en": "Lion",
+        "ru": "Лев",
+        "uk": "Лев",
+        "de": "Löwe",
+        "fr": "Lion",
+        "es": "León",
+        "it": "Leone"
+      }
+    },
+    {
+      "id": "fish",
+      "prompt": "A happy fish under the sea with bubbles",
+      "glyph": "fish",
+      "label": {
+        "en": "Fish",
+        "ru": "Рыбка",
+        "uk": "Рибка",
+        "de": "Fisch",
+        "fr": "Poisson",
+        "es": "Pez",
+        "it": "Pesce"
+      }
+    },
+    {
+      "id": "dragon",
+      "prompt": "A friendly little dragon",
+      "label": {
+        "en": "Dragon",
+        "ru": "Дракон",
+        "uk": "Дракон",
+        "de": "Drache",
+        "fr": "Dragon",
+        "es": "Dragón",
+        "it": "Drago"
+      }
+    },
+    {
+      "id": "digger",
+      "prompt": "A digger digging in the sand",
+      "label": {
+        "en": "Digger",
+        "ru": "Экскаватор",
+        "uk": "Екскаватор",
+        "de": "Bagger",
+        "fr": "Pelleteuse",
+        "es": "Excavadora",
+        "it": "Ruspa"
+      }
+    },
+    {
+      "id": "icecream",
+      "prompt": "An ice cream cone with three scoops",
+      "label": {
+        "en": "Ice cream",
+        "ru": "Мороженое",
+        "uk": "Морозиво",
+        "de": "Eis",
+        "fr": "Glace",
+        "es": "Helado",
+        "it": "Gelato"
+      }
+    },
+    {
+      "id": "rainbow",
+      "prompt": "A rainbow with a smiling sun and clouds",
+      "label": {
+        "en": "Rainbow",
+        "ru": "Радуга",
+        "uk": "Веселка",
+        "de": "Regenbogen",
+        "fr": "Arc-en-ciel",
+        "es": "Arcoíris",
+        "it": "Arcobaleno"
+      }
+    }
+  ]
+}

@@ -26,26 +26,51 @@ export function pageImages(page, landscape) {
   return order.filter(Boolean).map((file) => new URL(file, BASE).href);
 }
 
-// What a tile shows: the small thumbnail if the page has one, else its pictures.
-export function pageThumbs(page, landscape) {
-  const thumb = page.images?.thumb ? [new URL(page.images.thumb, BASE).href] : [];
-  return [...thumb, ...pageImages(page, landscape)];
+// A page's thumbnail: a small, simple emoji-like picture of its subject for the tile.
+export function pageThumb(page) {
+  return new URL(page.images?.thumb ?? `${page.id}-thumb.webp`, BASE).href;
 }
 
-// The first of the page's pictures that downloads.
-export async function fetchPage(page, landscape, signal) {
-  let error;
-  for (const url of pageImages(page, landscape)) {
-    try {
-      const response = await fetch(url, { signal });
-      if (response.ok) return await response.blob();
-      error = new Error(`HTTP ${response.status}`);
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-      error = e;
-    }
+// The prompt for a page's thumbnail. `thumbPrompt` in the entry names the subject;
+// otherwise its English label does.
+export function thumbPrompt(page) {
+  const subject = page.thumbPrompt ?? page.label?.en ?? page.prompt;
+  return [
+    `One simple emoji-style icon of: ${subject}.`,
+    'A single cute subject, centered and filling most of the square, seen from the front or side.',
+    'Chunky rounded shapes, flat bright colors, a thick dark rounded outline, at most one tiny highlight.',
+    'Transparent background: no scene, no ground, no frame, no shadow, no text.',
+    'It must read clearly when shown very small, like an emoji.',
+  ].join(' ');
+}
+
+// The first of the page's pictures that exists (checked once per page and shape), or null.
+const found = new Map();
+export function findPage(page, landscape) {
+  const key = `${page.id}:${landscape}`;
+  if (!found.has(key)) {
+    found.set(
+      key,
+      (async () => {
+        for (const url of pageImages(page, landscape)) {
+          try {
+            if ((await fetch(url, { method: 'HEAD' })).ok) return url;
+          } catch {
+            // offline or blocked: try the next one
+          }
+        }
+        found.delete(key); // try again next time, e.g. after the pictures are added
+        return null;
+      })(),
+    );
   }
-  throw error;
+  return found.get(key);
+}
+
+export async function fetchPage(url, signal) {
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.blob();
 }
 
 // `count` random pages, leaving out the ones in `avoid` (the last set shown) while

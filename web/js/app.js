@@ -4,7 +4,7 @@ import { PAGE_LONG_SIDE, canvasToBlob } from './render.js';
 import { colorValue, loadConfig, loadServerConfig } from './config.js';
 import { icon, inkDefs } from './icons.js';
 import { applyTranslations, getLanguage, setLanguage, t } from './i18n.js';
-import { fetchPage, loadLibrary, pageLabel, pageThumbs, pickPages } from './library.js';
+import { fetchPage, findPage, loadLibrary, pageImages, pageLabel, pageThumb, pickPages } from './library.js';
 import { AppViewModel } from './viewmodel.js';
 import { DrawingDocument } from './document.js';
 import { CanvasInput } from './input.js';
@@ -279,24 +279,30 @@ function fillIdea(text) {
   syncIdeaTiles();
 }
 
+// The tile shows the page's thumbnail, else the page itself, else its glyph. Tapping it
+// loads the page when its picture exists, else fills in its word for the generator.
 function libraryTile(page) {
   const label = pageLabel(page, getLanguage());
-  const urls = pageThumbs(page, doc.width >= doc.height);
+  const landscape = doc.width >= doc.height;
+  const sources = [pageThumb(page), ...pageImages(page, landscape)];
   const img = document.createElement('img');
   img.className = 'idea-thumb';
   img.alt = '';
   img.decoding = 'async';
   let tried = 0;
-  const b = tileButton(page.glyph ?? 'create', label, () =>
-    b.classList.contains('has-picture') ? usePremadePage(page) : fillIdea(label),
-  );
+  let url = null;
+  const b = tileButton(page.glyph ?? 'create', label, () => (url ? usePremadePage(page, url) : fillIdea(label)));
   b.setAttribute('aria-label', label);
-  img.addEventListener('load', () => b.classList.add('has-picture'));
-  img.addEventListener('error', () => {
-    if (++tried < urls.length) img.src = urls[tried];
+  img.addEventListener('load', () => {
+    b.classList.add('has-picture');
+    img.classList.toggle('emoji', tried === 0);
   });
-  img.src = urls[0];
+  img.addEventListener('error', () => {
+    if (++tried < sources.length) img.src = sources[tried];
+  });
+  img.src = sources[0];
   b.prepend(img);
+  findPage(page, landscape).then((found) => (url = found));
   return b;
 }
 
@@ -377,9 +383,9 @@ async function makePage(load) {
   }
 }
 
-function usePremadePage(page) {
+function usePremadePage(page, url) {
   return makePage(async (signal) => ({
-    blob: await fetchPage(page, doc.width >= doc.height, signal),
+    blob: await fetchPage(url, signal),
     options: page.style === 'lineArt' ? { lineArt: true } : { colored: true },
   }));
 }

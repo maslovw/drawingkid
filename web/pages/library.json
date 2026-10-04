@@ -1,9 +1,10 @@
 {
   "_comment": [
     "Pre-made coloring pages for the Create dialog. Each page's pictures are",
-    "<id>-portrait.png and <id>-landscape.png next to this file (override with",
-    "\"images\": {\"portrait\": \"…\", \"landscape\": \"…\", \"thumb\": \"…\"}; a thumb is optional",
-    "and saves downloading full pages for the tiles). They are colored pages, made",
+    "<id>-portrait.png and <id>-landscape.png next to this file, and its tile shows",
+    "<id>-thumb.webp, a small emoji-like picture (override any of them with",
+    "\"images\": {\"portrait\": \"…\", \"landscape\": \"…\", \"thumb\": \"…\"}, and the",
+    "thumbnail's subject with \"thumbPrompt\"). The pages are colored pages, made",
     "with the same prompt as Create; set \"style\": \"lineArt\" for black-and-white ones.",
     "A page whose pictures are missing still shows, and tapping it asks the generator",
     "instead. See web/README.md."
@@ -12,6 +13,7 @@
     {
       "id": "dinosaur",
       "prompt": "A friendly dinosaur smiling in a meadow",
+      "thumbPrompt": "a friendly green dinosaur",
       "glyph": "dino",
       "label": {
         "en": "Dinosaur",
@@ -78,6 +80,7 @@
     {
       "id": "firetruck",
       "prompt": "A fire truck with a ladder",
+      "thumbPrompt": "a red fire truck",
       "label": {
         "en": "Fire truck",
         "ru": "Пожарная машина",
@@ -91,6 +94,7 @@
     {
       "id": "racecar",
       "prompt": "A race car with a big number on the side",
+      "thumbPrompt": "a red race car",
       "label": {
         "en": "Race car",
         "ru": "Гоночная машина",
@@ -171,6 +175,7 @@
     {
       "id": "teddy",
       "prompt": "A teddy bear holding a heart",
+      "thumbPrompt": "a brown teddy bear",
       "label": {
         "en": "Teddy bear",
         "ru": "Мишка",
@@ -210,6 +215,7 @@
     {
       "id": "fish",
       "prompt": "A happy fish under the sea with bubbles",
+      "thumbPrompt": "a happy orange fish",
       "glyph": "fish",
       "label": {
         "en": "Fish",
@@ -237,6 +243,7 @@
     {
       "id": "digger",
       "prompt": "A digger digging in the sand",
+      "thumbPrompt": "a yellow digger",
       "label": {
         "en": "Digger",
         "ru": "Экскаватор",
@@ -250,6 +257,7 @@
     {
       "id": "icecream",
       "prompt": "An ice cream cone with three scoops",
+      "thumbPrompt": "an ice cream cone",
       "label": {
         "en": "Ice cream",
         "ru": "Мороженое",
@@ -263,6 +271,7 @@
     {
       "id": "rainbow",
       "prompt": "A rainbow with a smiling sun and clouds",
+      "thumbPrompt": "a rainbow with a little white cloud",
       "label": {
         "en": "Rainbow",
         "ru": "Радуга",

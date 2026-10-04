@@ -1,13 +1,16 @@
 // Makes the pictures for the pre-made coloring pages in pages/library.json that don't
-// have them yet, with the same prompt the Create button uses: one portrait and one
-// landscape picture per page. Without --go it only lists what is missing.
+// have them yet: a portrait and a landscape page (the Create button's prompt) and a
+// small emoji-like thumbnail for the tile. Without --go it only lists what is missing.
 //
-//   node web/tools/make-pages.mjs                         # list missing pictures
-//   OPENAI_API_KEY=sk-… node web/tools/make-pages.mjs --go [--only dinosaur,unicorn] [--model gpt-image-2.5-flare]
+//   node web/tools/make-pages.mjs                          # list missing pictures
+//   OPENAI_API_KEY=sk-… node web/tools/make-pages.mjs --go  # make them
+//   options: --only dinosaur,unicorn   --pages (no thumbnails)   --thumbs (only thumbnails)
+//            --model gpt-image-2.5-flare
 
 import { access, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { PROVIDERS, coloringPrompt } from '../js/imagegen.js';
+import { thumbPrompt } from '../js/library.js';
 
 const pagesDir = resolve(import.meta.dirname, '..', 'pages');
 const args = process.argv.slice(2);
@@ -18,7 +21,18 @@ const option = (name) => {
 const go = args.includes('--go');
 const only = option('--only')?.split(',');
 const model = option('--model') ?? PROVIDERS.openai.defaultModel;
-const SIZES = { portrait: '1024x1536', landscape: '1536x1024' };
+const KINDS = {
+  portrait: { size: '1024x1536', file: (page) => page.images?.portrait ?? `${page.id}-portrait.png`, prompt: (page) => coloringPrompt(page.prompt) },
+  landscape: { size: '1536x1024', file: (page) => page.images?.landscape ?? `${page.id}-landscape.png`, prompt: (page) => coloringPrompt(page.prompt) },
+  // Smallest size the API makes; webp on a transparent background keeps the file small.
+  thumb: {
+    size: '1024x1024',
+    file: (page) => page.images?.thumb ?? `${page.id}-thumb.webp`,
+    prompt: thumbPrompt,
+    extra: { background: 'transparent', output_format: 'webp', output_compression: 70 },
+  },
+};
+const kinds = args.includes('--thumbs') ? ['thumb'] : args.includes('--pages') ? ['portrait', 'landscape'] : Object.keys(KINDS);
 
 const exists = (path) => access(path).then(() => true, () => false);
 const { pages } = JSON.parse(await readFile(join(pagesDir, 'library.json'), 'utf8'));
@@ -26,14 +40,14 @@ const { pages } = JSON.parse(await readFile(join(pagesDir, 'library.json'), 'utf
 const missing = [];
 for (const page of pages) {
   if (only && !only.includes(page.id)) continue;
-  for (const shape of Object.keys(SIZES)) {
-    const file = page.images?.[shape] ?? `${page.id}-${shape}.png`;
-    if (!(await exists(join(pagesDir, file)))) missing.push({ page, shape, file });
+  for (const kind of kinds) {
+    const file = KINDS[kind].file(page);
+    if (!(await exists(join(pagesDir, file)))) missing.push({ page, kind, file });
   }
 }
 
 console.log(`${missing.length} picture(s) missing${missing.length ? ':' : ''}`);
-for (const { file, page } of missing) console.log(`  ${file}  (${page.prompt})`);
+for (const { file, page, kind } of missing) console.log(`  ${file}  (${kind === 'thumb' ? page.thumbPrompt ?? page.label?.en : page.prompt})`);
 if (!go || !missing.length) process.exit(0);
 
 const apiKey = process.env.OPENAI_API_KEY;
@@ -42,12 +56,13 @@ if (!apiKey) {
   process.exit(1);
 }
 
-for (const { page, shape, file } of missing) {
+for (const { page, kind, file } of missing) {
+  const { size, prompt, extra } = KINDS[kind];
   process.stdout.write(`Making ${file}… `);
   const response = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, prompt: coloringPrompt(page.prompt), n: 1, size: SIZES[shape], quality: 'medium' }),
+    body: JSON.stringify({ model, prompt: prompt(page), n: 1, size, quality: 'medium', ...extra }),
   });
   const body = await response.json().catch(() => null);
   const b64 = body?.data?.[0]?.b64_json;

@@ -735,6 +735,13 @@ dialog::backdrop {
   display: block;
 }
 
+/* A thumbnail is an emoji-like picture on a transparent background: shown whole. */
+.idea-thumb.emoji {
+  object-fit: contain;
+  background: none;
+  border-radius: 0;
+}
+
 .idea-tile.has-picture .icon {
   display: none;
 }

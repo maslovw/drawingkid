@@ -72,20 +72,23 @@ If the address is https and voice still doesn't start, the Create dialog says wh
 ## Pre-made coloring pages
 
 `pages/library.json` lists 20 pages that 3–4-year-olds like most (dinosaur, unicorn, puppy, kitten, butterfly, fire truck, race car, train, rocket, castle, princess, mermaid, teddy bear, elephant, lion, fish, dragon, digger, ice cream, rainbow). Each entry has:
-- `id`: names its pictures, `<id>-portrait.png` and `<id>-landscape.png` in `pages/`. The paper's shape picks one; if it's missing, the other is used.
+- `id`: names its pictures in `pages/`: `<id>-portrait.png` and `<id>-landscape.png` (the paper's shape picks one; if it's missing, the other is used), and `<id>-thumb.webp`, a small, simple emoji-like picture the tile shows.
 - `prompt`: the English sentence the picture is made from.
 - `label`: the tile's word in each language.
-- Optional: `glyph` (an icon from `js/icons.js` shown until the picture loads), `images` (other file names, and a small `thumb` for the tile), and `style: "lineArt"` for black-and-white pictures. Pictures are colored pages by default, like the ones Create makes, so the fill bucket knows the areas.
+- Optional: `thumbPrompt` (the thumbnail's subject, if not the English label, e.g. "a friendly green dinosaur"), `glyph` (an icon from `js/icons.js` the tile shows while there's no picture), `images` (other file names for `portrait`, `landscape` and `thumb`), and `style: "lineArt"` for black-and-white pages. Pictures are colored pages by default, like the ones Create makes, so the fill bucket knows the areas.
 
-A page whose pictures don't exist yet still shows, with its glyph or the wand. Tapping it fills in its word for the generator instead.
+A tile shows the thumbnail, else the page itself, else the glyph (or the wand). A page whose pictures don't exist yet still shows; tapping it fills in its word for the generator instead.
 
-To make the missing pictures with the same prompt as Create (two per page, about 40 in total):
+To make the missing pictures, the pages with the same prompt as Create and the thumbnails with an emoji-style prompt (three per page, 60 in total):
 
 ```bash
 node web/tools/make-pages.mjs                               # list what's missing
 OPENAI_API_KEY=sk-… node web/tools/make-pages.mjs --go      # make them
 node web/tools/make-pages.mjs --go --only dinosaur,unicorn  # just some
+node web/tools/make-pages.mjs --go --thumbs                 # only thumbnails (--pages: only pages)
 ```
+
+Thumbnails are made at 1024×1024, the smallest size the API makes, as WebP on a transparent background, so each is small. A thumbnail drawn by hand works too: save it as `<id>-thumb.webp` (or PNG, named in `images.thumb`), ideally square and about 256×256.
 
 To add a page, add an entry to `library.json` and run the script.
 

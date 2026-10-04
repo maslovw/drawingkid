@@ -174,6 +174,13 @@ const STRINGS = {
     'create.ideas': "Ideas",
     'create.wait': "Drawing your page…",
     'create.shuffle': "Other ideas",
+    'action.gallery': "Gallery",
+    'action.galleryTitle': "All coloring pages",
+    'gallery.title': "Coloring pages",
+    'gallery.mine': "Made by me",
+    'gallery.premade': "Ready to color",
+    'gallery.empty': "No coloring pages yet. Tap Create to make one!",
+    'gallery.delete': "Delete this picture",
   },
 
   ru: {
@@ -338,6 +345,13 @@ const STRINGS = {
     'create.ideas': "Идеи",
     'create.wait': "Рисую раскраску…",
     'create.shuffle': "Другие идеи",
+    'action.gallery': "Галерея",
+    'action.galleryTitle': "Все раскраски",
+    'gallery.title': "Раскраски",
+    'gallery.mine': "Мои",
+    'gallery.premade': "Готовые",
+    'gallery.empty': "Пока нет раскрасок. Нажми «Создать»!",
+    'gallery.delete': "Удалить эту картинку",
   },
 
   uk: {
@@ -502,6 +516,13 @@ const STRINGS = {
     'create.ideas': "Ідеї",
     'create.wait': "Малюю розмальовку…",
     'create.shuffle': "Інші ідеї",
+    'action.gallery': "Галерея",
+    'action.galleryTitle': "Усі розмальовки",
+    'gallery.title': "Розмальовки",
+    'gallery.mine': "Мої",
+    'gallery.premade': "Готові",
+    'gallery.empty': "Поки немає розмальовок. Натисни «Створити»!",
+    'gallery.delete': "Видалити цю картинку",
   },
 
   de: {
@@ -664,6 +685,13 @@ const STRINGS = {
     'create.ideas': "Ideen",
     'create.wait': "Ich male dein Bild…",
     'create.shuffle': "Andere Ideen",
+    'action.gallery': "Galerie",
+    'action.galleryTitle': "Alle Ausmalbilder",
+    'gallery.title': "Ausmalbilder",
+    'gallery.mine': "Von mir",
+    'gallery.premade': "Fertige Bilder",
+    'gallery.empty': "Noch keine Ausmalbilder. Tippe auf Zaubern!",
+    'gallery.delete': "Dieses Bild löschen",
   },
 
   fr: {
@@ -826,6 +854,13 @@ const STRINGS = {
     'create.ideas': "Idées",
     'create.wait': "Je dessine ton coloriage…",
     'create.shuffle': "D'autres idées",
+    'action.gallery': "Galerie",
+    'action.galleryTitle': "Tous les coloriages",
+    'gallery.title': "Coloriages",
+    'gallery.mine': "Les miens",
+    'gallery.premade': "Prêts à colorier",
+    'gallery.empty': "Pas encore de coloriage. Appuie sur Créer !",
+    'gallery.delete': "Supprimer cette image",
   },
 
   es: {
@@ -988,6 +1023,13 @@ const STRINGS = {
     'create.ideas': "Ideas",
     'create.wait': "Dibujando tu página…",
     'create.shuffle': "Otras ideas",
+    'action.gallery': "Galería",
+    'action.galleryTitle': "Todos los dibujos para colorear",
+    'gallery.title': "Dibujos para colorear",
+    'gallery.mine': "Hechos por mí",
+    'gallery.premade': "Listos para colorear",
+    'gallery.empty': "Todavía no hay dibujos. ¡Toca Crear!",
+    'gallery.delete': "Borrar este dibujo",
   },
 
   it: {
@@ -1150,6 +1192,13 @@ const STRINGS = {
     'create.ideas': "Idee",
     'create.wait': "Sto disegnando la tua pagina…",
     'create.shuffle': "Altre idee",
+    'action.gallery': "Galleria",
+    'action.galleryTitle': "Tutti i disegni da colorare",
+    'gallery.title': "Disegni da colorare",
+    'gallery.mine': "Fatti da me",
+    'gallery.premade': "Pronti da colorare",
+    'gallery.empty': "Ancora nessun disegno. Tocca Crea!",
+    'gallery.delete': "Elimina questo disegno",
   },
 };
 

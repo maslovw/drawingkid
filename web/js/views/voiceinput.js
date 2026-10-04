@@ -100,17 +100,10 @@ export class VoiceInput {
     this.listening = true;
     this.#sync();
     if (!this.#active) return this.#begin();
-    // The previous session is still winding down and holds the microphone. End it and
-    // start once it lets go, or after a second if Safari never says so.
-    const fallback = setTimeout(() => {
-      this.#afterEnd = null;
-      this.#begin();
-    }, 1000);
-    this.#afterEnd = () => {
-      clearTimeout(fallback);
-      this.#begin();
-    };
-    this.#abort();
+    // The previous stop is still winding down. Interrupting it with abort() can
+    // leave Safari's next session showing a live mic but returning no words.
+    // Wait for its end before restarting the same recognizer.
+    this.#afterEnd = () => this.#begin();
   }
 
   #begin() {
@@ -162,7 +155,23 @@ export class VoiceInput {
       }
       clearTimeout(this.#stopTimer);
       this.#stopTimer = setTimeout(() => {
-        if (this.#active && !this.listening) this.#abort();
+        if (!this.#active) return;
+        // Safari never delivered `end`. Retire this recognizer before aborting
+        // so a late event cannot restart a session that has lost its microphone.
+        const waiting = Boolean(this.#afterEnd);
+        this.#afterEnd = null;
+        this.#active = false;
+        const stalled = this.recognition;
+        this.recognition = null;
+        try {
+          stalled.abort();
+        } catch (error) {
+          console.warn('Speech recognition failed to abort', error);
+        }
+        if (waiting) {
+          this.listening = false;
+          this.#showReason('mic-busy');
+        }
       }, 3000);
     }
     this.#sync();

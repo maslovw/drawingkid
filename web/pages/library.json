@@ -1,100 +1,335 @@
 {
   "_comment": [
-    "Pre-made coloring pages for the Create dialog. Each page's pictures are",
-    "<id>-portrait.png and <id>-landscape.png next to this file, and its tile shows",
-    "<id>-thumb.webp, a small emoji-like picture (override any of them with",
-    "\"images\": {\"portrait\": \"…\", \"landscape\": \"…\", \"thumb\": \"…\"}, and the",
-    "thumbnail's subject with \"thumbPrompt\"). The pages are colored pages, made",
-    "with the same prompt as Create; set \"style\": \"lineArt\" for black-and-white ones.",
-    "A page whose pictures are missing still shows, and tapping it asks the generator",
-    "instead. See web/README.md."
+    "Pre-made coloring pages for the Gallery and the Create dialog, in topics: the",
+    "Gallery's sections, in this order. A page's \"topic\" files it under one of them.",
+    "",
+    "The pictures aren't in git. \"pictures\" says where they are, relative to this file",
+    "(or a full URL): web/gallery/ locally, deployed to lsp with",
+    "server/deploy/deploy-gallery.sh. A page's file names are in \"images\": \"page\" is its",
+    "picture (one for either paper's shape; or \"portrait\" and \"landscape\"), and",
+    "\"preview\" a small copy of it for the tiles (or \"thumb\", an emoji-like picture).",
+    "Without \"images\" they're <id>-portrait.png, <id>-landscape.png and <id>-thumb.webp.",
+    "",
+    "The pages are colored pages, made with the same prompt as Create; set",
+    "\"style\": \"lineArt\" for black-and-white ones. A page whose pictures are missing is",
+    "left out of the Gallery; in Create, tapping it asks the generator instead.",
+    "See web/README.md."
+  ],
+  "pictures": "../gallery/",
+  "topics": [
+    {
+      "id": "unicorns",
+      "emoji": "🦄",
+      "label": {
+        "en": "Unicorns",
+        "ru": "Единороги",
+        "uk": "Єдинороги",
+        "de": "Einhörner",
+        "fr": "Licornes",
+        "es": "Unicornios",
+        "it": "Unicorni"
+      }
+    },
+    {
+      "id": "dinosaurs",
+      "emoji": "🦖",
+      "label": {
+        "en": "Dinosaurs",
+        "ru": "Динозавры",
+        "uk": "Динозаври",
+        "de": "Dinosaurier",
+        "fr": "Dinosaures",
+        "es": "Dinosaurios",
+        "it": "Dinosauri"
+      }
+    },
+    {
+      "id": "cars",
+      "emoji": "🚗",
+      "label": {
+        "en": "Cars",
+        "ru": "Машины",
+        "uk": "Машини",
+        "de": "Autos",
+        "fr": "Voitures",
+        "es": "Coches",
+        "it": "Macchine"
+      }
+    },
+    {
+      "id": "princesses",
+      "emoji": "👑",
+      "label": {
+        "en": "Princesses",
+        "ru": "Принцессы",
+        "uk": "Принцеси",
+        "de": "Prinzessinnen",
+        "fr": "Princesses",
+        "es": "Princesas",
+        "it": "Principesse"
+      }
+    },
+    {
+      "id": "pets",
+      "emoji": "🐶",
+      "label": {
+        "en": "Pets",
+        "ru": "Домашние животные",
+        "uk": "Домашні тварини",
+        "de": "Haustiere",
+        "fr": "Animaux de compagnie",
+        "es": "Mascotas",
+        "it": "Animali domestici"
+      }
+    },
+    {
+      "id": "construction",
+      "emoji": "🚜",
+      "label": {
+        "en": "Construction vehicles",
+        "ru": "Строительные машины",
+        "uk": "Будівельна техніка",
+        "de": "Baufahrzeuge",
+        "fr": "Engins de chantier",
+        "es": "Vehículos de obra",
+        "it": "Mezzi da cantiere"
+      }
+    },
+    {
+      "id": "rescue",
+      "emoji": "🚒",
+      "label": {
+        "en": "Rescue vehicles",
+        "ru": "Спасательные машины",
+        "uk": "Рятувальні машини",
+        "de": "Rettungsfahrzeuge",
+        "fr": "Véhicules de secours",
+        "es": "Vehículos de rescate",
+        "it": "Mezzi di soccorso"
+      }
+    },
+    {
+      "id": "farm",
+      "emoji": "🐮",
+      "label": {
+        "en": "Farm animals",
+        "ru": "Животные на ферме",
+        "uk": "Тварини на фермі",
+        "de": "Bauernhoftiere",
+        "fr": "Animaux de la ferme",
+        "es": "Animales de granja",
+        "it": "Animali della fattoria"
+      }
+    },
+    {
+      "id": "castles-dragons",
+      "emoji": "🏰",
+      "label": {
+        "en": "Castles & friendly dragons",
+        "ru": "Замки и добрые драконы",
+        "uk": "Замки й добрі дракони",
+        "de": "Burgen und liebe Drachen",
+        "fr": "Châteaux et gentils dragons",
+        "es": "Castillos y dragones amigos",
+        "it": "Castelli e draghi buoni"
+      }
+    },
+    {
+      "id": "trains",
+      "emoji": "🚂",
+      "label": {
+        "en": "Trains",
+        "ru": "Поезда",
+        "uk": "Потяги",
+        "de": "Züge",
+        "fr": "Trains",
+        "es": "Trenes",
+        "it": "Treni"
+      }
+    },
+    {
+      "id": "fish",
+      "emoji": "🐟",
+      "label": {
+        "en": "Fish",
+        "ru": "Рыбы",
+        "uk": "Риби",
+        "de": "Fische",
+        "fr": "Poissons",
+        "es": "Peces",
+        "it": "Pesci"
+      }
+    },
+    {
+      "id": "jungle",
+      "emoji": "🦁",
+      "label": {
+        "en": "Zoo & jungle animals",
+        "ru": "Животные зоопарка и джунглей",
+        "uk": "Тварини зоопарку й джунглів",
+        "de": "Zoo- und Dschungeltiere",
+        "fr": "Animaux du zoo et de la jungle",
+        "es": "Animales del zoo y la selva",
+        "it": "Animali dello zoo e della giungla"
+      }
+    },
+    {
+      "id": "ocean",
+      "emoji": "🐠",
+      "label": {
+        "en": "Ocean animals",
+        "ru": "Морские животные",
+        "uk": "Морські тварини",
+        "de": "Meerestiere",
+        "fr": "Animaux de la mer",
+        "es": "Animales del mar",
+        "it": "Animali del mare"
+      }
+    },
+    {
+      "id": "space",
+      "emoji": "🚀",
+      "label": {
+        "en": "Space & rockets",
+        "ru": "Космос и ракеты",
+        "uk": "Космос і ракети",
+        "de": "Weltraum und Raketen",
+        "fr": "Espace et fusées",
+        "es": "Espacio y cohetes",
+        "it": "Spazio e razzi"
+      }
+    },
+    {
+      "id": "birthdays-treats",
+      "emoji": "🎂",
+      "label": {
+        "en": "Birthdays & treats",
+        "ru": "Дни рождения и сладости",
+        "uk": "Дні народження й ласощі",
+        "de": "Geburtstage und Leckereien",
+        "fr": "Anniversaires et gourmandises",
+        "es": "Cumpleaños y dulces",
+        "it": "Compleanni e dolcetti"
+      }
+    }
   ],
   "pages": [
     {
-      "id": "dinosaur",
-      "prompt": "A friendly dinosaur smiling in a meadow",
-      "thumbPrompt": "a friendly green dinosaur",
-      "glyph": "dino",
+      "id": "unicorns-01",
+      "topic": "unicorns",
+      "prompt": "Very happy unicorn beside a rainbow",
+      "images": {
+        "page": "unicorns-01.png",
+        "preview": "unicorns-01-preview.webp"
+      },
       "label": {
-        "en": "Dinosaur",
-        "ru": "Динозавр",
-        "uk": "Динозавр",
-        "de": "Dinosaurier",
-        "fr": "Dinosaure",
-        "es": "Dinosaurio",
-        "it": "Dinosauro"
+        "en": "Unicorn & rainbow",
+        "ru": "Единорог и радуга",
+        "uk": "Єдиноріг і веселка",
+        "de": "Einhorn mit Regenbogen",
+        "fr": "Licorne et arc-en-ciel",
+        "es": "Unicornio y arcoíris",
+        "it": "Unicorno e arcobaleno"
       }
     },
     {
-      "id": "unicorn",
-      "prompt": "A happy unicorn with a flowing mane",
+      "id": "unicorns-02",
+      "topic": "unicorns",
+      "prompt": "Happy unicorn celebrating with a birthday cake and two balloons",
+      "images": {
+        "page": "unicorns-02.png",
+        "preview": "unicorns-02-preview.webp"
+      },
       "label": {
-        "en": "Unicorn",
-        "ru": "Единорог",
-        "uk": "Єдиноріг",
-        "de": "Einhorn",
-        "fr": "Licorne",
-        "es": "Unicornio",
-        "it": "Unicorno"
+        "en": "Birthday unicorn",
+        "ru": "Единорог на празднике",
+        "uk": "Єдиноріг на святі",
+        "de": "Geburtstagseinhorn",
+        "fr": "Licorne d'anniversaire",
+        "es": "Unicornio de cumpleaños",
+        "it": "Unicorno di compleanno"
       }
     },
     {
-      "id": "puppy",
-      "prompt": "A cute puppy playing with a ball",
+      "id": "unicorns-03",
+      "topic": "unicorns",
+      "prompt": "Baby unicorn sitting beside a large flower",
+      "images": {
+        "page": "unicorns-03.png",
+        "preview": "unicorns-03-preview.webp"
+      },
       "label": {
-        "en": "Puppy",
-        "ru": "Щенок",
-        "uk": "Цуценя",
-        "de": "Hündchen",
-        "fr": "Chiot",
-        "es": "Perrito",
-        "it": "Cagnolino"
+        "en": "Baby unicorn",
+        "ru": "Маленький единорог",
+        "uk": "Маленький єдиноріг",
+        "de": "Einhornbaby",
+        "fr": "Bébé licorne",
+        "es": "Unicornio bebé",
+        "it": "Unicorno cucciolo"
       }
     },
     {
-      "id": "kitten",
-      "prompt": "A cute kitten playing with a ball of yarn",
+      "id": "dinosaurs-01",
+      "topic": "dinosaurs",
+      "prompt": "Happy baby dinosaur beside a large dinosaur egg",
+      "images": {
+        "page": "dinosaurs-01.png",
+        "preview": "dinosaurs-01-preview.webp"
+      },
       "label": {
-        "en": "Kitten",
-        "ru": "Котёнок",
-        "uk": "Кошеня",
-        "de": "Kätzchen",
-        "fr": "Chaton",
-        "es": "Gatito",
-        "it": "Gattino"
+        "en": "Baby dinosaur",
+        "ru": "Динозаврик",
+        "uk": "Динозаврик",
+        "de": "Dinobaby",
+        "fr": "Bébé dinosaure",
+        "es": "Dinosaurio bebé",
+        "it": "Dinosauro cucciolo"
       }
     },
     {
-      "id": "butterfly",
-      "prompt": "A big butterfly on a flower",
+      "id": "dinosaurs-02",
+      "topic": "dinosaurs",
+      "prompt": "Friendly long-neck dinosaur beside a simple tree",
+      "images": {
+        "page": "dinosaurs-02.png",
+        "preview": "dinosaurs-02-preview.webp"
+      },
       "label": {
-        "en": "Butterfly",
-        "ru": "Бабочка",
-        "uk": "Метелик",
-        "de": "Schmetterling",
-        "fr": "Papillon",
-        "es": "Mariposa",
-        "it": "Farfalla"
+        "en": "Long-neck dinosaur",
+        "ru": "Длинношеий динозавр",
+        "uk": "Довгоший динозавр",
+        "de": "Langhalsdino",
+        "fr": "Dinosaure à long cou",
+        "es": "Dinosaurio de cuello largo",
+        "it": "Dinosauro dal collo lungo"
       }
     },
     {
-      "id": "firetruck",
-      "prompt": "A fire truck with a ladder",
-      "thumbPrompt": "a red fire truck",
+      "id": "dinosaurs-03",
+      "topic": "dinosaurs",
+      "prompt": "Smiling stegosaurus beside a small volcano",
+      "images": {
+        "page": "dinosaurs-03.png",
+        "preview": "dinosaurs-03-preview.webp"
+      },
       "label": {
-        "en": "Fire truck",
-        "ru": "Пожарная машина",
-        "uk": "Пожежна машина",
-        "de": "Feuerwehrauto",
-        "fr": "Camion de pompiers",
-        "es": "Camión de bomberos",
-        "it": "Camion dei pompieri"
+        "en": "Stegosaurus",
+        "ru": "Стегозавр",
+        "uk": "Стегозавр",
+        "de": "Stegosaurus",
+        "fr": "Stégosaure",
+        "es": "Estegosaurio",
+        "it": "Stegosauro"
       }
     },
     {
-      "id": "racecar",
-      "prompt": "A race car with a big number on the side",
-      "thumbPrompt": "a red race car",
+      "id": "cars-01",
+      "topic": "cars",
+      "prompt": "Chunky race car beside a large racing flag",
+      "images": {
+        "page": "cars-01.png",
+        "preview": "cars-01-preview.webp"
+      },
       "label": {
         "en": "Race car",
         "ru": "Гоночная машина",
@@ -106,49 +341,49 @@
       }
     },
     {
-      "id": "train",
-      "prompt": "A smiling steam train with two carriages",
+      "id": "cars-02",
+      "topic": "cars",
+      "prompt": "Small rounded car beside a simple tree",
+      "images": {
+        "page": "cars-02.png",
+        "preview": "cars-02-preview.webp"
+      },
       "label": {
-        "en": "Train",
-        "ru": "Поезд",
-        "uk": "Потяг",
-        "de": "Zug",
-        "fr": "Train",
-        "es": "Tren",
-        "it": "Treno"
+        "en": "Little car",
+        "ru": "Машинка",
+        "uk": "Машинка",
+        "de": "Kleines Auto",
+        "fr": "Petite voiture",
+        "es": "Cochecito",
+        "it": "Macchinina"
       }
     },
     {
-      "id": "rocket",
-      "prompt": "A rocket flying to the moon",
-      "glyph": "rocket",
+      "id": "cars-03",
+      "topic": "cars",
+      "prompt": "Big monster truck beside a small sand mound",
+      "images": {
+        "page": "cars-03.png",
+        "preview": "cars-03-preview.webp"
+      },
       "label": {
-        "en": "Rocket",
-        "ru": "Ракета",
-        "uk": "Ракета",
-        "de": "Rakete",
-        "fr": "Fusée",
-        "es": "Cohete",
-        "it": "Razzo"
+        "en": "Monster truck",
+        "ru": "Монстр-трак",
+        "uk": "Монстр-трак",
+        "de": "Monstertruck",
+        "fr": "Monster truck",
+        "es": "Camión monstruo",
+        "it": "Monster truck"
       }
     },
     {
-      "id": "castle",
-      "prompt": "A castle with towers and flags",
-      "glyph": "castle",
-      "label": {
-        "en": "Castle",
-        "ru": "Замок",
-        "uk": "Замок",
-        "de": "Schloss",
-        "fr": "Château",
-        "es": "Castillo",
-        "it": "Castello"
-      }
-    },
-    {
-      "id": "princess",
-      "prompt": "A smiling princess with a crown",
+      "id": "princesses-01",
+      "topic": "princesses",
+      "prompt": "Happy princess wearing a large crown and a simple dress",
+      "images": {
+        "page": "princesses-01.png",
+        "preview": "princesses-01-preview.webp"
+      },
       "label": {
         "en": "Princess",
         "ru": "Принцесса",
@@ -160,48 +395,427 @@
       }
     },
     {
-      "id": "mermaid",
-      "prompt": "A smiling mermaid sitting on a rock in the sea",
+      "id": "princesses-02",
+      "topic": "princesses",
+      "prompt": "Smiling princess holding a large flower",
+      "images": {
+        "page": "princesses-02.png",
+        "preview": "princesses-02-preview.webp"
+      },
       "label": {
-        "en": "Mermaid",
-        "ru": "Русалка",
-        "uk": "Русалка",
-        "de": "Meerjungfrau",
-        "fr": "Sirène",
-        "es": "Sirena",
-        "it": "Sirena"
+        "en": "Princess with a flower",
+        "ru": "Принцесса с цветком",
+        "uk": "Принцеса з квіткою",
+        "de": "Prinzessin mit Blume",
+        "fr": "Princesse et fleur",
+        "es": "Princesa con flor",
+        "it": "Principessa con fiore"
       }
     },
     {
-      "id": "teddy",
-      "prompt": "A teddy bear holding a heart",
-      "thumbPrompt": "a brown teddy bear",
+      "id": "princesses-03",
+      "topic": "princesses",
+      "prompt": "Happy princess beside a small frog wearing a crown",
+      "images": {
+        "page": "princesses-03.png",
+        "preview": "princesses-03-preview.webp"
+      },
       "label": {
-        "en": "Teddy bear",
-        "ru": "Мишка",
-        "uk": "Ведмедик",
-        "de": "Teddybär",
-        "fr": "Nounours",
-        "es": "Osito",
-        "it": "Orsacchiotto"
+        "en": "Princess & frog",
+        "ru": "Принцесса и лягушка",
+        "uk": "Принцеса і жабка",
+        "de": "Prinzessin und Frosch",
+        "fr": "Princesse et grenouille",
+        "es": "Princesa y rana",
+        "it": "Principessa e rana"
       }
     },
     {
-      "id": "elephant",
-      "prompt": "A baby elephant spraying water",
+      "id": "pets-01",
+      "topic": "pets",
+      "prompt": "Playful puppy beside a large ball",
+      "images": {
+        "page": "pets-01.png",
+        "preview": "pets-01-preview.webp"
+      },
       "label": {
-        "en": "Elephant",
-        "ru": "Слон",
-        "uk": "Слон",
-        "de": "Elefant",
-        "fr": "Éléphant",
-        "es": "Elefante",
-        "it": "Elefante"
+        "en": "Puppy",
+        "ru": "Щенок",
+        "uk": "Цуценя",
+        "de": "Hündchen",
+        "fr": "Chiot",
+        "es": "Perrito",
+        "it": "Cagnolino"
       }
     },
     {
-      "id": "lion",
-      "prompt": "A friendly lion with a big mane",
+      "id": "pets-02",
+      "topic": "pets",
+      "prompt": "Happy kitten beside a large yarn ball",
+      "images": {
+        "page": "pets-02.png",
+        "preview": "pets-02-preview.webp"
+      },
+      "label": {
+        "en": "Kitten",
+        "ru": "Котёнок",
+        "uk": "Кошеня",
+        "de": "Kätzchen",
+        "fr": "Chaton",
+        "es": "Gatito",
+        "it": "Gattino"
+      }
+    },
+    {
+      "id": "pets-03",
+      "topic": "pets",
+      "prompt": "Cheerful rabbit beside a large carrot",
+      "images": {
+        "page": "pets-03.png",
+        "preview": "pets-03-preview.webp"
+      },
+      "label": {
+        "en": "Bunny",
+        "ru": "Кролик",
+        "uk": "Кролик",
+        "de": "Häschen",
+        "fr": "Lapin",
+        "es": "Conejito",
+        "it": "Coniglietto"
+      }
+    },
+    {
+      "id": "construction-01",
+      "topic": "construction",
+      "prompt": "Big excavator digging a small pile of sand",
+      "images": {
+        "page": "construction-01.png",
+        "preview": "construction-01-preview.webp"
+      },
+      "label": {
+        "en": "Excavator",
+        "ru": "Экскаватор",
+        "uk": "Екскаватор",
+        "de": "Bagger",
+        "fr": "Pelleteuse",
+        "es": "Excavadora",
+        "it": "Escavatore"
+      }
+    },
+    {
+      "id": "construction-02",
+      "topic": "construction",
+      "prompt": "Chunky dump truck carrying large rocks",
+      "images": {
+        "page": "construction-02.png",
+        "preview": "construction-02-preview.webp"
+      },
+      "label": {
+        "en": "Dump truck",
+        "ru": "Самосвал",
+        "uk": "Самоскид",
+        "de": "Kipplaster",
+        "fr": "Camion benne",
+        "es": "Volquete",
+        "it": "Camion ribaltabile"
+      }
+    },
+    {
+      "id": "construction-03",
+      "topic": "construction",
+      "prompt": "Friendly bulldozer pushing a small earth mound",
+      "images": {
+        "page": "construction-03.png",
+        "preview": "construction-03-preview.webp"
+      },
+      "label": {
+        "en": "Bulldozer",
+        "ru": "Бульдозер",
+        "uk": "Бульдозер",
+        "de": "Planierraupe",
+        "fr": "Bulldozer",
+        "es": "Bulldozer",
+        "it": "Ruspa"
+      }
+    },
+    {
+      "id": "rescue-01",
+      "topic": "rescue",
+      "prompt": "Big fire engine with a simple ladder",
+      "images": {
+        "page": "rescue-01.png",
+        "preview": "rescue-01-preview.webp"
+      },
+      "label": {
+        "en": "Fire engine",
+        "ru": "Пожарная машина",
+        "uk": "Пожежна машина",
+        "de": "Feuerwehrauto",
+        "fr": "Camion de pompiers",
+        "es": "Camión de bomberos",
+        "it": "Camion dei pompieri"
+      }
+    },
+    {
+      "id": "rescue-02",
+      "topic": "rescue",
+      "prompt": "Rounded ambulance beside a large medical bag",
+      "images": {
+        "page": "rescue-02.png",
+        "preview": "rescue-02-preview.webp"
+      },
+      "label": {
+        "en": "Ambulance",
+        "ru": "Скорая помощь",
+        "uk": "Швидка допомога",
+        "de": "Krankenwagen",
+        "fr": "Ambulance",
+        "es": "Ambulancia",
+        "it": "Ambulanza"
+      }
+    },
+    {
+      "id": "rescue-03",
+      "topic": "rescue",
+      "prompt": "Rescue helicopter above a small grassy hill",
+      "images": {
+        "page": "rescue-03.png",
+        "preview": "rescue-03-preview.webp"
+      },
+      "label": {
+        "en": "Rescue helicopter",
+        "ru": "Спасательный вертолёт",
+        "uk": "Рятувальний гелікоптер",
+        "de": "Rettungshubschrauber",
+        "fr": "Hélicoptère de secours",
+        "es": "Helicóptero de rescate",
+        "it": "Elicottero di soccorso"
+      }
+    },
+    {
+      "id": "farm-01",
+      "topic": "farm",
+      "prompt": "Happy cow beside a small barn",
+      "images": {
+        "page": "farm-01.png",
+        "preview": "farm-01-preview.webp"
+      },
+      "label": {
+        "en": "Cow",
+        "ru": "Корова",
+        "uk": "Корова",
+        "de": "Kuh",
+        "fr": "Vache",
+        "es": "Vaca",
+        "it": "Mucca"
+      }
+    },
+    {
+      "id": "farm-02",
+      "topic": "farm",
+      "prompt": "Cheerful pig beside a simple mud puddle",
+      "images": {
+        "page": "farm-02.png",
+        "preview": "farm-02-preview.webp"
+      },
+      "label": {
+        "en": "Piggy",
+        "ru": "Свинка",
+        "uk": "Свинка",
+        "de": "Schweinchen",
+        "fr": "Cochon",
+        "es": "Cerdito",
+        "it": "Maialino"
+      }
+    },
+    {
+      "id": "farm-03",
+      "topic": "farm",
+      "prompt": "Smiling sheep beside a large hay bale",
+      "images": {
+        "page": "farm-03.png",
+        "preview": "farm-03-preview.webp"
+      },
+      "label": {
+        "en": "Sheep",
+        "ru": "Овечка",
+        "uk": "Овечка",
+        "de": "Schaf",
+        "fr": "Mouton",
+        "es": "Oveja",
+        "it": "Pecora"
+      }
+    },
+    {
+      "id": "castles-dragons-01",
+      "topic": "castles-dragons",
+      "prompt": "Simple castle with three large towers and flags",
+      "images": {
+        "page": "castles-dragons-01.png",
+        "preview": "castles-dragons-01-preview.webp"
+      },
+      "label": {
+        "en": "Castle",
+        "ru": "Замок",
+        "uk": "Замок",
+        "de": "Burg",
+        "fr": "Château",
+        "es": "Castillo",
+        "it": "Castello"
+      }
+    },
+    {
+      "id": "castles-dragons-02",
+      "topic": "castles-dragons",
+      "prompt": "Happy baby dragon beside a large treasure chest",
+      "images": {
+        "page": "castles-dragons-02.png",
+        "preview": "castles-dragons-02-preview.webp"
+      },
+      "label": {
+        "en": "Baby dragon",
+        "ru": "Дракончик",
+        "uk": "Дракончик",
+        "de": "Drachenbaby",
+        "fr": "Bébé dragon",
+        "es": "Dragón bebé",
+        "it": "Draghetto"
+      }
+    },
+    {
+      "id": "castles-dragons-03",
+      "topic": "castles-dragons",
+      "prompt": "Friendly dragon beside a small castle tower",
+      "images": {
+        "page": "castles-dragons-03.png",
+        "preview": "castles-dragons-03-preview.webp"
+      },
+      "label": {
+        "en": "Dragon & tower",
+        "ru": "Дракон и башня",
+        "uk": "Дракон і вежа",
+        "de": "Drache und Turm",
+        "fr": "Dragon et tour",
+        "es": "Dragón y torre",
+        "it": "Drago e torre"
+      }
+    },
+    {
+      "id": "trains-01",
+      "topic": "trains",
+      "prompt": "Cheerful locomotive pulling two simple carriages",
+      "images": {
+        "page": "trains-01.png",
+        "preview": "trains-01-preview.webp"
+      },
+      "label": {
+        "en": "Locomotive",
+        "ru": "Паровозик",
+        "uk": "Паротяг",
+        "de": "Lokomotive",
+        "fr": "Locomotive",
+        "es": "Locomotora",
+        "it": "Locomotiva"
+      }
+    },
+    {
+      "id": "trains-02",
+      "topic": "trains",
+      "prompt": "Chunky train beside a small station",
+      "images": {
+        "page": "trains-02.png",
+        "preview": "trains-02-preview.webp"
+      },
+      "label": {
+        "en": "Train at the station",
+        "ru": "Поезд на станции",
+        "uk": "Потяг на станції",
+        "de": "Zug am Bahnhof",
+        "fr": "Train à la gare",
+        "es": "Tren en la estación",
+        "it": "Treno in stazione"
+      }
+    },
+    {
+      "id": "trains-03",
+      "topic": "trains",
+      "prompt": "Simple train crossing a short bridge",
+      "images": {
+        "page": "trains-03.png",
+        "preview": "trains-03-preview.webp"
+      },
+      "label": {
+        "en": "Train on a bridge",
+        "ru": "Поезд на мосту",
+        "uk": "Потяг на мосту",
+        "de": "Zug auf der Brücke",
+        "fr": "Train sur le pont",
+        "es": "Tren en el puente",
+        "it": "Treno sul ponte"
+      }
+    },
+    {
+      "id": "fish-01",
+      "topic": "fish",
+      "prompt": "Friendly smiling shark beside a large seashell",
+      "images": {
+        "page": "fish-01.png",
+        "preview": "fish-01-preview.webp"
+      },
+      "label": {
+        "en": "Shark",
+        "ru": "Акула",
+        "uk": "Акула",
+        "de": "Hai",
+        "fr": "Requin",
+        "es": "Tiburón",
+        "it": "Squalo"
+      }
+    },
+    {
+      "id": "fish-02",
+      "topic": "fish",
+      "prompt": "Very happy dolphin celebrating with a birthday cake and two balloons",
+      "images": {
+        "page": "fish-02.png",
+        "preview": "fish-02-preview.webp"
+      },
+      "label": {
+        "en": "Birthday dolphin",
+        "ru": "Дельфин на празднике",
+        "uk": "Дельфін на святі",
+        "de": "Geburtstagsdelfin",
+        "fr": "Dauphin d'anniversaire",
+        "es": "Delfín de cumpleaños",
+        "it": "Delfino di compleanno"
+      }
+    },
+    {
+      "id": "fish-03",
+      "topic": "fish",
+      "prompt": "Friendly smiling sawfish with a long saw-shaped snout beside a large seaweed plant",
+      "images": {
+        "page": "fish-03.png",
+        "preview": "fish-03-preview.webp"
+      },
+      "label": {
+        "en": "Sawfish",
+        "ru": "Рыба-пила",
+        "uk": "Риба-пилка",
+        "de": "Sägefisch",
+        "fr": "Poisson-scie",
+        "es": "Pez sierra",
+        "it": "Pesce sega"
+      }
+    },
+    {
+      "id": "jungle-01",
+      "topic": "jungle",
+      "prompt": "Smiling lion beside a large leafy plant",
+      "images": {
+        "page": "jungle-01.png",
+        "preview": "jungle-01-preview.webp"
+      },
       "label": {
         "en": "Lion",
         "ru": "Лев",
@@ -213,51 +827,175 @@
       }
     },
     {
-      "id": "fish",
-      "prompt": "A happy fish under the sea with bubbles",
-      "thumbPrompt": "a happy orange fish",
-      "glyph": "fish",
+      "id": "jungle-02",
+      "topic": "jungle",
+      "prompt": "Happy elephant beside a simple tree",
+      "images": {
+        "page": "jungle-02.png",
+        "preview": "jungle-02-preview.webp"
+      },
       "label": {
-        "en": "Fish",
-        "ru": "Рыбка",
-        "uk": "Рибка",
-        "de": "Fisch",
-        "fr": "Poisson",
-        "es": "Pez",
-        "it": "Pesce"
+        "en": "Elephant",
+        "ru": "Слон",
+        "uk": "Слон",
+        "de": "Elefant",
+        "fr": "Éléphant",
+        "es": "Elefante",
+        "it": "Elefante"
       }
     },
     {
-      "id": "dragon",
-      "prompt": "A friendly little dragon",
+      "id": "jungle-03",
+      "topic": "jungle",
+      "prompt": "Cheerful giraffe beside a low leafy branch",
+      "images": {
+        "page": "jungle-03.png",
+        "preview": "jungle-03-preview.webp"
+      },
       "label": {
-        "en": "Dragon",
-        "ru": "Дракон",
-        "uk": "Дракон",
-        "de": "Drache",
-        "fr": "Dragon",
-        "es": "Dragón",
-        "it": "Drago"
+        "en": "Giraffe",
+        "ru": "Жираф",
+        "uk": "Жираф",
+        "de": "Giraffe",
+        "fr": "Girafe",
+        "es": "Jirafa",
+        "it": "Giraffa"
       }
     },
     {
-      "id": "digger",
-      "prompt": "A digger digging in the sand",
-      "thumbPrompt": "a yellow digger",
+      "id": "ocean-01",
+      "topic": "ocean",
+      "prompt": "Friendly sea turtle beside two large fish",
+      "images": {
+        "page": "ocean-01.png",
+        "preview": "ocean-01-preview.webp"
+      },
       "label": {
-        "en": "Digger",
-        "ru": "Экскаватор",
-        "uk": "Екскаватор",
-        "de": "Bagger",
-        "fr": "Pelleteuse",
-        "es": "Excavadora",
-        "it": "Ruspa"
+        "en": "Sea turtle",
+        "ru": "Морская черепаха",
+        "uk": "Морська черепаха",
+        "de": "Meeresschildkröte",
+        "fr": "Tortue de mer",
+        "es": "Tortuga marina",
+        "it": "Tartaruga marina"
       }
     },
     {
-      "id": "icecream",
-      "prompt": "An ice cream cone with three scoops",
-      "thumbPrompt": "an ice cream cone",
+      "id": "ocean-02",
+      "topic": "ocean",
+      "prompt": "Happy whale beside a simple seaweed plant",
+      "images": {
+        "page": "ocean-02.png",
+        "preview": "ocean-02-preview.webp"
+      },
+      "label": {
+        "en": "Whale",
+        "ru": "Кит",
+        "uk": "Кит",
+        "de": "Wal",
+        "fr": "Baleine",
+        "es": "Ballena",
+        "it": "Balena"
+      }
+    },
+    {
+      "id": "ocean-03",
+      "topic": "ocean",
+      "prompt": "Smiling octopus beside a large seashell",
+      "images": {
+        "page": "ocean-03.png",
+        "preview": "ocean-03-preview.webp"
+      },
+      "label": {
+        "en": "Octopus",
+        "ru": "Осьминог",
+        "uk": "Восьминіг",
+        "de": "Krake",
+        "fr": "Pieuvre",
+        "es": "Pulpo",
+        "it": "Polpo"
+      }
+    },
+    {
+      "id": "space-01",
+      "topic": "space",
+      "prompt": "Chunky rocket beside a crescent moon and two large stars",
+      "images": {
+        "page": "space-01.png",
+        "preview": "space-01-preview.webp"
+      },
+      "label": {
+        "en": "Rocket",
+        "ru": "Ракета",
+        "uk": "Ракета",
+        "de": "Rakete",
+        "fr": "Fusée",
+        "es": "Cohete",
+        "it": "Razzo"
+      }
+    },
+    {
+      "id": "space-02",
+      "topic": "space",
+      "prompt": "Happy astronaut standing beside a small rocket",
+      "images": {
+        "page": "space-02.png",
+        "preview": "space-02-preview.webp"
+      },
+      "label": {
+        "en": "Astronaut",
+        "ru": "Космонавт",
+        "uk": "Космонавт",
+        "de": "Astronaut",
+        "fr": "Astronaute",
+        "es": "Astronauta",
+        "it": "Astronauta"
+      }
+    },
+    {
+      "id": "space-03",
+      "topic": "space",
+      "prompt": "Friendly alien beside a simple flying saucer",
+      "images": {
+        "page": "space-03.png",
+        "preview": "space-03-preview.webp"
+      },
+      "label": {
+        "en": "Alien",
+        "ru": "Инопланетянин",
+        "uk": "Інопланетянин",
+        "de": "Außerirdischer",
+        "fr": "Extraterrestre",
+        "es": "Extraterrestre",
+        "it": "Alieno"
+      }
+    },
+    {
+      "id": "birthdays-treats-01",
+      "topic": "birthdays-treats",
+      "prompt": "Large birthday cake beside two balloons",
+      "images": {
+        "page": "birthdays-treats-01.png",
+        "preview": "birthdays-treats-01-preview.webp"
+      },
+      "label": {
+        "en": "Birthday cake",
+        "ru": "Праздничный торт",
+        "uk": "Святковий торт",
+        "de": "Geburtstagstorte",
+        "fr": "Gâteau d'anniversaire",
+        "es": "Pastel de cumpleaños",
+        "it": "Torta di compleanno"
+      }
+    },
+    {
+      "id": "birthdays-treats-02",
+      "topic": "birthdays-treats",
+      "prompt": "Large ice cream cone beside two strawberries",
+      "images": {
+        "page": "birthdays-treats-02.png",
+        "preview": "birthdays-treats-02-preview.webp"
+      },
       "label": {
         "en": "Ice cream",
         "ru": "Мороженое",
@@ -269,17 +1007,21 @@
       }
     },
     {
-      "id": "rainbow",
-      "prompt": "A rainbow with a smiling sun and clouds",
-      "thumbPrompt": "a rainbow with a little white cloud",
+      "id": "birthdays-treats-03",
+      "topic": "birthdays-treats",
+      "prompt": "Happy teddy bear beside a wrapped birthday present",
+      "images": {
+        "page": "birthdays-treats-03.png",
+        "preview": "birthdays-treats-03-preview.webp"
+      },
       "label": {
-        "en": "Rainbow",
-        "ru": "Радуга",
-        "uk": "Веселка",
-        "de": "Regenbogen",
-        "fr": "Arc-en-ciel",
-        "es": "Arcoíris",
-        "it": "Arcobaleno"
+        "en": "Teddy & present",
+        "ru": "Мишка и подарок",
+        "uk": "Ведмедик і подарунок",
+        "de": "Teddy mit Geschenk",
+        "fr": "Nounours et cadeau",
+        "es": "Osito y regalo",
+        "it": "Orsetto e regalo"
       }
     }
   ]

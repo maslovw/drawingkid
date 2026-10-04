@@ -1,34 +1,47 @@
-// Pre-made coloring pages (pages/library.json): the Create dialog offers a few of them
-// each time it opens, so a page is there instantly, for free and without an API key.
+// Pre-made coloring pages (pages/library.json): the Gallery shows them by topic, and the
+// Create dialog offers a few of them each time it opens, so a page is there instantly,
+// for free and without an API key.
 
 const BASE = new URL('../pages/', import.meta.url);
+// Where the pictures are: library.json's "pictures", relative to it. They aren't in git.
+let picturesBase = BASE;
 
+// { pages, topics }: topics in the Gallery's order, each { id, emoji, label }.
 export async function loadLibrary() {
   try {
     const response = await fetch(new URL('library.json', BASE), { cache: 'no-cache' });
-    if (!response.ok) return [];
-    const { pages } = await response.json();
-    return Array.isArray(pages) ? pages.filter((p) => p?.id && p.prompt) : [];
+    if (!response.ok) return { pages: [], topics: [] };
+    const { pages, topics, pictures } = await response.json();
+    picturesBase = new URL(pictures ?? './', BASE);
+    return {
+      pages: Array.isArray(pages) ? pages.filter((p) => p?.id && p.prompt) : [],
+      topics: Array.isArray(topics) ? topics.filter((t) => t?.id) : [],
+    };
   } catch (error) {
     console.warn('Could not load the coloring page library', error);
-    return [];
+    return { pages: [], topics: [] };
   }
 }
 
+// A page's or a topic's word in the language, else in English.
 export function pageLabel(page, language) {
-  return page.label?.[language] ?? page.label?.en ?? page.prompt;
+  return page.label?.[language] ?? page.label?.en ?? page.prompt ?? page.id;
 }
 
-// Picture URLs to try, the one matching the paper's shape first.
+// Picture URLs to try, the one matching the paper's shape first. A page made in one
+// shape for both papers names it as `images.page`.
 export function pageImages(page, landscape) {
+  if (page.images?.page) return [new URL(page.images.page, picturesBase).href];
   const images = { portrait: `${page.id}-portrait.png`, landscape: `${page.id}-landscape.png`, ...page.images };
   const order = landscape ? [images.landscape, images.portrait] : [images.portrait, images.landscape];
-  return order.filter(Boolean).map((file) => new URL(file, BASE).href);
+  return order.filter(Boolean).map((file) => new URL(file, picturesBase).href);
 }
 
-// A page's thumbnail: a small, simple emoji-like picture of its subject for the tile.
+// A page's tile picture: a small copy of the page (`images.preview`) when it has one,
+// else a small, simple emoji-like picture of its subject, which the tile shows whole.
 export function pageThumb(page) {
-  return new URL(page.images?.thumb ?? `${page.id}-thumb.webp`, BASE).href;
+  const preview = page.images?.preview;
+  return { url: new URL(preview ?? page.images?.thumb ?? `${page.id}-thumb.webp`, picturesBase).href, emoji: !preview };
 }
 
 // The prompt for a page's thumbnail. `thumbPrompt` in the entry names the subject;

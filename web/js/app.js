@@ -20,7 +20,7 @@ import { GalleryView, makeThumb } from './views/gallery.js';
 
 const $ = (id) => document.getElementById(id);
 
-const [server, library] = await Promise.all([loadServerConfig(), loadLibrary()]);
+const [server, { pages: library, topics }] = await Promise.all([loadServerConfig(), loadLibrary()]);
 setManagedApiKeys(server.apiKeys);
 const vm = new AppViewModel(loadConfig(server.settings), server.settings);
 
@@ -286,7 +286,8 @@ function fillIdea(text) {
 function libraryTile(page) {
   const label = pageLabel(page, getLanguage());
   const landscape = doc.width >= doc.height;
-  const sources = [pageThumb(page), ...pageImages(page, landscape)];
+  const thumb = pageThumb(page);
+  const sources = [thumb.url, ...pageImages(page, landscape)];
   const img = document.createElement('img');
   img.className = 'idea-thumb';
   img.alt = '';
@@ -310,7 +311,7 @@ function libraryTile(page) {
   b.setAttribute('aria-label', label);
   img.addEventListener('load', () => {
     b.classList.add('has-picture');
-    img.classList.toggle('emoji', tried === 0);
+    img.classList.toggle('emoji', tried === 0 && thumb.emoji);
   });
   img.addEventListener('error', () => {
     if (++tried < sources.length) img.src = sources[tried];
@@ -450,6 +451,7 @@ $('create-go').addEventListener('click', () => {
 
 const gallery = new GalleryView($('gallery-dialog'), {
   library,
+  topics,
   landscape: () => doc.width >= doc.height,
   onPick: async (page) => {
     try {

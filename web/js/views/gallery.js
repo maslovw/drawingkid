@@ -1,6 +1,6 @@
 // Gallery: every coloring page there is, full screen. "Made by me" holds the pages the
 // kid generated (kept in IndexedDB, newest first); "Ready to color" the developer's
-// pre-made pages whose pictures exist. Tapping one puts it on the paper.
+// pre-made pages whose pictures exist, a row per topic. Tapping one puts it on the paper.
 
 import { t, getLanguage } from '../i18n.js';
 import { icon } from '../icons.js';
@@ -26,9 +26,10 @@ export async function makeThumb(blob) {
 
 export class GalleryView {
   // onPick({ blob, options }) puts a page on the paper; confirmDelete() asks a grown-up.
-  constructor(dialog, { library, landscape, onPick, confirmDelete }) {
+  constructor(dialog, { library, topics = [], landscape, onPick, confirmDelete }) {
     this.dialog = dialog;
     this.library = library;
+    this.topics = topics;
     this.landscape = landscape;
     this.onPick = onPick;
     this.confirmDelete = confirmDelete;
@@ -50,9 +51,8 @@ export class GalleryView {
     const premade = (await Promise.all(this.library.map(async (page) => ({ page, url: await findPage(page, landscape) })))).filter((p) => p.url);
 
     const mineGrid = this.dialog.querySelector('#gallery-mine');
-    const premadeGrid = this.dialog.querySelector('#gallery-premade');
     mineGrid.replaceChildren(...mine.map((record) => this.#mineTile(record)));
-    premadeGrid.replaceChildren(...premade.map(({ page, url }) => this.#premadeTile(page, url, landscape)));
+    this.dialog.querySelector('#gallery-premade').replaceChildren(...this.#topicRows(premade, landscape));
     this.dialog.querySelector('#gallery-mine-section').hidden = !mine.length;
     this.dialog.querySelector('#gallery-premade-section').hidden = !premade.length;
     this.dialog.querySelector('#gallery-empty').hidden = Boolean(mine.length || premade.length);
@@ -77,8 +77,43 @@ export class GalleryView {
     return tile;
   }
 
+  // A headed row of pages for each topic, in the library's order; pages without a known
+  // topic come last, under no heading.
+  #topicRows(premade, landscape) {
+    const language = getLanguage();
+    const known = new Set(this.topics.map((topic) => topic.id));
+    const groups = [
+      ...this.topics.map((topic) => ({ topic, items: premade.filter(({ page }) => page.topic === topic.id) })),
+      { topic: null, items: premade.filter(({ page }) => !known.has(page.topic)) },
+    ];
+    return groups
+      .filter(({ items }) => items.length)
+      .map(({ topic, items }) => {
+        const section = document.createElement('section');
+        section.className = 'gallery-topic';
+        if (topic) {
+          const heading = document.createElement('h4');
+          if (topic.emoji) {
+            const emoji = document.createElement('span');
+            emoji.className = 'topic-emoji';
+            emoji.setAttribute('aria-hidden', 'true');
+            emoji.textContent = topic.emoji;
+            heading.append(emoji);
+          }
+          heading.append(pageLabel(topic, language));
+          section.append(heading);
+        }
+        const grid = document.createElement('ul');
+        grid.className = 'gallery-grid';
+        grid.replaceChildren(...items.map(({ page, url }) => this.#premadeTile(page, url, landscape)));
+        section.append(grid);
+        return section;
+      });
+  }
+
   #premadeTile(page, url, landscape) {
-    const tile = this.#tile(pageThumb(page), pageLabel(page, getLanguage()), async () => ({
+    const thumb = pageThumb(page);
+    const tile = this.#tile(thumb.url, pageLabel(page, getLanguage()), async () => ({
       blob: await fetchPage(url),
       options: page.style === 'lineArt' ? { lineArt: true } : { colored: true },
     }));
@@ -89,7 +124,7 @@ export class GalleryView {
       img.classList.remove('emoji');
       if (fallbacks.length) img.src = fallbacks.shift();
     });
-    img.classList.add('emoji');
+    img.classList.toggle('emoji', thumb.emoji);
     return tile;
   }
 

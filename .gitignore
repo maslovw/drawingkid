@@ -119,3 +119,7 @@ web/*.pem
 
 # Scratch output (prompt experiments, test images)
 .tmp/
+
+# Drawing Kid: the coloring page pictures aren't kept in git; deploy them with
+# server/deploy/deploy-gallery.sh (see web/README.md)
+web/gallery/

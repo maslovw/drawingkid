@@ -9,8 +9,10 @@ rsync -a --delete --exclude data --exclude secrets --exclude .env --exclude test
   "$ROOT/server/" lsp:/opt/drawingkid-server/
 
 # Web app. It has no config.local.json on purpose: on the public site parents type their
-# own API key in Settings; the server's key is for the iPad app only.
-rsync -a --delete --exclude config.local.json --exclude '*.pem' --exclude '*.py' --exclude '*.sh' \
+# own API key in Settings; the server's key is for the iPad app only. The coloring page
+# pictures (gallery/) aren't in git and are deployed by deploy-gallery.sh, so they're
+# left alone here.
+rsync -a --delete --exclude config.local.json --exclude '*.pem' --exclude '*.py' --exclude '*.sh' --exclude /gallery \
   "$ROOT/web/" lsp:/var/www/play/drawingkid/
 ssh lsp 'rm -f /var/www/play/drawingkid/config.local.json'
 

@@ -45,7 +45,7 @@ Upload the `web/` folder to any static host, such as GitHub Pages, Netlify, Clou
 | Languages | English, Русский, Українська, Deutsch, Français, Español and Italiano. Pick one under Settings → **Language**, or leave it on **Same as the device**, which uses the first of the device's languages the app has (English otherwise). Everything is translated: buttons, dialogs, the Log, error messages and the idea pictures in Create. Voice input listens in the chosen language. The choice is saved with the other settings and can be fixed for every device in `config.local.json` (`"language": "de"`). |
 | Settings | Choose the language, which tools and colors appear, the starting brush size, left- or right-handed layout, whether buttons show words or only pictures (for kids who don't read yet), and the coloring page generator. Protected by a parent check (a small multiplication like 7 × 8). Saved in `localStorage`. |
 | Create | Shows three pre-made coloring pages, shuffled every time it opens, and a die for three others. Tapping one puts it on the paper straight away, with no API key and no cost (see [Pre-made coloring pages](#pre-made-coloring-pages)). Or say or type one sentence ("a dinosaur eating ice cream") and get a new page from OpenAI or Gemini. |
-| Gallery | Every coloring page there is, full screen (the Gallery button; on a phone it's in More). **Made by me**: the pages the kid made with Create, newest first, kept in IndexedDB on the device. **Ready to color**: the pre-made pages whose pictures exist. Tapping one puts it on the paper (undoable). Deleting one of the kid's pages asks the grown-ups question first. |
+| Gallery | Every coloring page there is, full screen (the Gallery button; on a phone it's in More). **Made by me**: the pages the kid made with Create, newest first, kept in IndexedDB on the device. **Ready to color**: the pre-made pages whose pictures exist, a row per topic (🦄 Unicorns, 🦖 Dinosaurs, 🚗 Cars…). Tapping one puts it on the paper (undoable). Deleting one of the kid's pages asks the grown-ups question first. |
 | Log | In Settings, **Log** shows how many coloring pages were made (in total and this month), what they cost, and every request with the child's words, the model, token counts and any error. |
 | Autosave | The current drawing, its undo history and the background are kept in IndexedDB and restored on reload. |
 | Clear | Clear the drawing (keeps the picture, can be undone) or start a new blank page sized to the screen. |
@@ -72,13 +72,27 @@ If the address is https and voice still doesn't start, the Create dialog says wh
 
 ## Pre-made coloring pages
 
-`pages/library.json` lists 20 pages that 3–4-year-olds like most (dinosaur, unicorn, puppy, kitten, butterfly, fire truck, race car, train, rocket, castle, princess, mermaid, teddy bear, elephant, lion, fish, dragon, digger, ice cream, rainbow). Each entry has:
-- `id`: names its pictures in `pages/`: `<id>-portrait.png` and `<id>-landscape.png` (the paper's shape picks one; if it's missing, the other is used), and `<id>-thumb.webp`, a small, simple emoji-like picture the tile shows.
+`pages/library.json` lists 45 pages in 15 topics that young kids like most, three per topic: unicorns, dinosaurs, cars, princesses, pets, construction vehicles, rescue vehicles, farm animals, castles & friendly dragons, trains, fish, zoo & jungle animals, ocean animals, space & rockets, birthdays & treats. `topics` gives each topic's `id`, `emoji` and `label` in each language, in the order the Gallery shows them. `pictures` says where the pictures are, relative to `library.json` or as a full URL (`../gallery/`, see [The pictures](#the-pictures)). Each page has:
+- `id`: names its pictures: `<id>-portrait.png` and `<id>-landscape.png` (the paper's shape picks one; if it's missing, the other is used), and `<id>-thumb.webp`, a small, simple emoji-like picture the tile shows.
 - `prompt`: the English sentence the picture is made from.
 - `label`: the tile's word in each language.
-- Optional: `thumbPrompt` (the thumbnail's subject, if not the English label, e.g. "a friendly green dinosaur"), `glyph` (an icon from `js/icons.js` the tile shows while there's no picture), `images` (other file names for `portrait`, `landscape` and `thumb`), and `style: "lineArt"` for black-and-white pages. Pictures are colored pages by default, like the ones Create makes, so the fill bucket knows the areas.
+- Optional: `topic` (the Gallery row it's in; pages without one come last), `thumbPrompt` (the thumbnail's subject, if not the English label, e.g. "a friendly green dinosaur"), `glyph` (an icon from `js/icons.js` the tile shows while there's no picture), `images` (other file names for `portrait`, `landscape` and `thumb`; `page` for one picture used on either paper; `preview` for a small copy of the page that the tile shows instead of the emoji thumbnail), and `style: "lineArt"` for black-and-white pages. Pictures are colored pages by default, like the ones Create makes, so the fill bucket knows the areas.
 
-A tile shows the thumbnail, else the page itself, else the glyph (or the wand). A page whose pictures don't exist yet still shows; tapping it fills in its word for the generator instead.
+The 45 pages each have one picture (`<id>.png`, about 1250×1250, letterboxed onto either paper) and a 360px `<id>-preview.webp`. They were made with the Create prompt.
+
+A tile shows the preview or thumbnail, else the page itself, else the glyph (or the wand). A page whose pictures aren't there is left out of the Gallery; in Create it still shows, and tapping it fills in its word for the generator instead.
+
+### The pictures
+
+The pictures (about 50 MB) aren't in git: `web/gallery/` is ignored. On lsp they're in `/var/www/play/drawingkid/gallery/`, which `deploy.sh` leaves alone. `server/deploy/deploy-gallery.sh` takes a folder or a `.zip` of the pictures, keeps only the ones `library.json` names, makes the missing previews (`sips` and `cwebp`, so run it on the Mac), packs them into one archive, copies it to lsp with `scp` and swaps it in. It stops without deploying if any page's picture is missing.
+
+```bash
+server/deploy/deploy-gallery.sh output/coloring-gallery.zip          # deploy to lsp
+server/deploy/deploy-gallery.sh --local output/coloring-gallery.zip  # only fill web/gallery/ for local use
+server/deploy/deploy-gallery.sh                                      # deploy web/gallery/
+```
+
+Without the pictures the app still works: the Gallery shows only the kid's own pages.
 
 To make the missing pictures, the pages with the same prompt as Create and the thumbnails with an emoji-style prompt (three per page, 60 in total):
 
@@ -91,7 +105,7 @@ node web/tools/make-pages.mjs --go --thumbs                 # only thumbnails (-
 
 Thumbnails are made at 1024×1024, the smallest size the API makes, as WebP on a transparent background, so each is small. A thumbnail drawn by hand works too: save it as `<id>-thumb.webp` (or PNG, named in `images.thumb`), ideally square and about 256×256.
 
-To add a page, add an entry to `library.json` and run the script.
+`make-pages.mjs` saves the pictures where `pictures` points. To add a page, add an entry to `library.json`, run the script, then `deploy-gallery.sh`.
 
 ## Button glyphs
 

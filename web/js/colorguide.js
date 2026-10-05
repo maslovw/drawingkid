@@ -20,6 +20,11 @@ const MAX_COLORS = 16;
 // Pixels farther than this from every palette color (after allowing for darkening toward an
 // outline) are blends between two colors: they belong to no area.
 const MAX_RESIDUAL = 44;
+// Pixels at least this light (as a share of a palette color) are that color, flat. Darker
+// ones are only an area's soft edge, so they're matched to the area they touch.
+const FLAT_LIGHT = 0.9;
+// ...unless some palette color explains them darkened better than this (RGB distance).
+const FLAT_SLACK = 12;
 // Areas smaller than this share of the page are specks from blending, not real areas.
 const MIN_AREA_SHARE = 0.00003;
 // Off-palette patches: neighbors differing by at most this much per channel are one patch,
@@ -44,10 +49,19 @@ export function splitColoredPage(image) {
 
   // Each pixel as a palette color darkened by `t` toward black (an outline's soft edge).
   // Flat pages repeat the same few thousand colors, so each is worked out once.
+  // First only near-flat matches (t ≥ FLAT_LIGHT): any neutral gray is also white darkened,
+  // so a gray area would otherwise split into white and gray specks with seams between them.
   const color = new Int16Array(n).fill(-1);
   const light = new Float32Array(n);
   const known = new Map();
   const maxResidual2 = MAX_RESIDUAL * MAX_RESIDUAL;
+  const darkened = (o, k) => {
+    const r = data[o], g = data[o + 1], b = data[o + 2];
+    const [pr, pg, pb] = palette[k];
+    const t = Math.min(1, (r * pr + g * pg + b * pb) / (pr * pr + pg * pg + pb * pb || 1));
+    const dr = r - t * pr, dg = g - t * pg, db = b - t * pb;
+    return [dr * dr + dg * dg + db * db, t];
+  };
   for (let i = 0, o = 0; i < n; i++, o += 4) {
     const r = data[o], g = data[o + 1], b = data[o + 2];
     if (r < INK_MAX && g < INK_MAX && b < INK_MAX) continue;
@@ -57,24 +71,55 @@ export function splitColoredPage(image) {
       let best = -1;
       let bestResidual = Infinity;
       let bestT = 0;
+      let anyResidual = Infinity;
       for (let k = 0; k < palette.length; k++) {
-        const [pr, pg, pb] = palette[k];
-        const t = Math.min(1, (r * pr + g * pg + b * pb) / (pr * pr + pg * pg + pb * pb || 1));
-        const dr = r - t * pr, dg = g - t * pg, db = b - t * pb;
-        const residual = dr * dr + dg * dg + db * db;
+        let [residual, t] = darkened(o, k);
+        anyResidual = Math.min(anyResidual, residual);
+        if (t < FLAT_LIGHT) {
+          const [pr, pg, pb] = palette[k];
+          const dr = r - FLAT_LIGHT * pr, dg = g - FLAT_LIGHT * pg, db = b - FLAT_LIGHT * pb;
+          residual = dr * dr + dg * dg + db * db;
+          t = FLAT_LIGHT;
+        }
         if (residual < bestResidual) {
           best = k;
           bestResidual = residual;
           bestT = t;
         }
       }
-      match = bestResidual <= maxResidual2 ? [best, bestT] : null;
+      // A pixel some color explains much better darkened than any color does flat is a soft
+      // edge, left for the growing below.
+      const flat = bestResidual <= maxResidual2 && Math.sqrt(bestResidual) - Math.sqrt(anyResidual) <= FLAT_SLACK;
+      match = flat ? [best, bestT] : null;
       known.set(rgb, match);
     }
     if (match) {
       color[i] = match[0];
       light[i] = match[1];
     }
+  }
+  // Then each color grows into the darker pixels next to it (its soft edge toward an outline),
+  // nearest first, taking only pixels that are that color darkened.
+  let front = [];
+  for (let i = 0; i < n; i++) if (color[i] >= 0) front.push(i);
+  while (front.length) {
+    const next = [];
+    for (const i of front) {
+      const k = color[i];
+      const x = i % w;
+      for (let side = 0; side < 4; side++) {
+        const j = side === 0 ? (x > 0 ? i - 1 : -1) : side === 1 ? (x < w - 1 ? i + 1 : -1) : side === 2 ? i - w : i + w;
+        if (j < 0 || j >= n || color[j] >= 0) continue;
+        const o = j * 4;
+        if (data[o] < INK_MAX && data[o + 1] < INK_MAX && data[o + 2] < INK_MAX) continue;
+        const [residual, t] = darkened(o, k);
+        if (residual > maxResidual2) continue;
+        color[j] = k;
+        light[j] = t;
+        next.push(j);
+      }
+    }
+    front = next;
   }
   const ink = new Uint8Array(n);
   for (let i = 0, o = 0; i < n; i++, o += 4) {

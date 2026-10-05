@@ -71,12 +71,17 @@ export function cleanIdea(raw) {
 export function coloringPrompt(idea) {
   return [
     `A page from a children's coloring book for a young child showing: ${idea}.`,
-    'Already colored in: every area is filled with one flat, solid color, and thick solid black outlines of even width go around every area, including inner parts like bellies, chests and inner ears.',
-    'Use only 5 to 7 bright, clearly different colors in the whole picture, plus white for the background. Two areas that touch always have different colors, even parts of one thing (for example leaves, stems and grass in different greens).',
+    'Already colored in: every area is filled with one flat, solid color, and thick solid pure black outlines of even width go around every area, including inner parts like bellies, chests and inner ears.',
+    'Use only 5 to 7 bright, clearly different colors in the whole picture, plus plain pure white for the background. Two areas that touch always have different colors, even parts of one thing (for example leaves, stems and grass in different greens).',
+    // Gray is the one color the page's outlines blur into, so gray areas can't be told
+    // from an outline's soft edge. Things that are gray in life get a bright color.
+    'Never use gray, silver, beige, cream or off-white anywhere: things that are usually gray get a bright color instead (rails and roads brown or blue, rocks and metal blue or purple, an elephant or a mouse light blue).',
     'Black is only for the outlines and small details like pupils; tires, hair, noses, buttons and other solid shapes get a bright color, never black or a very dark color.',
     'Every outline is closed and joins up with the lines around it, with no gaps.',
-    'Simple, friendly, cartoon style with a few large areas, easy for a young child; keep things apart rather than piled up.',
-    'No shading, no gradients, no highlights, no shadows, no texture, no patterns, no gray, no text, no border.',
+    // A shape cut off by the page edge has no outline there.
+    'The whole picture fits inside the page with a white margin all around; nothing is cut off by the edge of the page.',
+    'Simple, friendly, cartoon style with a few large areas, each big enough to fill with a fingertip; keep things apart rather than piled up.',
+    'Crisp, clean edges like vector art. No shading, no gradients, no highlights, no shadows, no glow, no texture, no patterns, no text, no border or frame.',
   ].join(' ');
 }
 

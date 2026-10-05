@@ -37,6 +37,14 @@ const SHADED_OFFSET = 12;
 const SHADED_SHARE = 0.25;
 // Touching areas whose colors are closer than this blend into one when they meet smoothly.
 const CLOSE_COLORS = 64;
+// A real area is at least this thick somewhere (px from its edge to its middle, and at least
+// this share of the outline width). Thinner ones are the blurred edge of an outline (gray on
+// white, darker green on green): they join the area next to them instead of getting seams.
+const MIN_DEPTH = 2.5;
+const MIN_DEPTH_OF_LINE = 0.4;
+// ...except a thin area outlines wall off from every other area, which is real if it's at
+// least this thick (a narrow stripe, about 4 px across).
+const MIN_STRIPE_DEPTH = 1.5;
 
 // `image` is { width, height, data } (RGBA). Returns { lineArt, guide, colors }: two RGBA
 // arrays of the same size, and how many palette colors were found. `lineArt` is the page to
@@ -286,11 +294,69 @@ export function splitColoredPage(image) {
     }
   }
 
-  // Where two areas meet with no outline between them, the page gets one drawn in.
+  // Thin areas are an outline's blurred edge, not areas: an anti-aliased or blurry black line
+  // on white leaves bands of gray that match a real gray area's color flat. Their pixels join
+  // the thick area next to them, nearest first, as its soft edge.
   const lineWidth = outlineWidth(data, w, h);
-  const radius = Math.max(1, lineWidth * 0.35);
-  const seam = new Uint8Array(n);
+  const edge = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = area[i];
+    if (a <= 0) {
+      edge[i] = 1;
+      continue;
+    }
+    const x = i % w;
+    if ((x > 0 && area[i - 1] !== a) || (x < w - 1 && area[i + 1] !== a) || (i >= w && area[i - w] !== a) || (i < n - w && area[i + w] !== a)) {
+      edge[i] = 1;
+    }
+  }
+  const inside = chamferDistance(edge, w, h);
+  const areaDepth = new Float32Array(areas + 1);
+  for (let i = 0; i < n; i++) if (area[i] > 0 && inside[i] > areaDepth[area[i]]) areaDepth[area[i]] = inside[i];
+  const minDepth = Math.max(MIN_DEPTH, lineWidth * MIN_DEPTH_OF_LINE);
+  const thin = (a) => a > 0 && areaDepth[a] < minDepth;
+  const wasArea = new Int32Array(n); // a thin pixel's own area, until a thick one takes it
+  const absorbed = new Uint8Array(areas + 1);
+  front = [];
+  let thinPixels = 0;
+  for (let i = 0; i < n; i++) {
+    if (thin(area[i])) {
+      wasArea[i] = area[i];
+      area[i] = 0;
+      thinPixels++;
+    } else if (area[i] > 0) {
+      front.push(i);
+    }
+  }
+  while (thinPixels && front.length) {
+    const next = [];
+    for (const i of front) {
+      const x = i % w;
+      for (let side = 0; side < 4; side++) {
+        const j = side === 0 ? (x > 0 ? i - 1 : -1) : side === 1 ? (x < w - 1 ? i + 1 : -1) : side === 2 ? i - w : i + w;
+        if (j < 0 || j >= n || area[j] !== 0 || color[j] < 0 || ink[j]) continue;
+        absorbed[wasArea[j]] = 1;
+        area[j] = area[i];
+        color[j] = color[i];
+        light[j] = darkened(j * 4, color[i])[1];
+        next.push(j);
+      }
+    }
+    front = next;
+  }
+  // A thin area walled off by outlines, a few pixels across, is a real narrow area (a stripe),
+  // so it stays one; a hairline or the rest of a band a thick area took part of is no area.
+  for (let i = 0; i < n; i++) {
+    if (area[i] !== 0 || color[i] < 0) continue;
+    const a = wasArea[i];
+    area[i] = absorbed[a] || areaDepth[a] < MIN_STRIPE_DEPTH ? -1 : a;
+  }
+
+  // Where two areas meet with no outline between them, the page gets one drawn in, about as
+  // thick as the page's outlines (the band where both areas are within reach is ~2·reach wide).
   const reach = 2;
+  const radius = Math.max(0.75, lineWidth / 2 - reach);
+  const seam = new Uint8Array(n);
   for (let y = reach; y < h - reach; y++) {
     for (let x = reach; x < w - reach; x++) {
       const i = y * w + x;
